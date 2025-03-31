@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { promptService } from '../utils/api';
 
 const Explore = () => {
   // フィルター状態
@@ -11,104 +12,38 @@ const Explore = () => {
 
   // 検索クエリ状態
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // プロンプトデータ状態
+  const [prompts, setPrompts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ダミーデータ（後でAPIから取得するように置き換えます）
-  const dummyPrompts = [
-    {
-      id: 1,
-      title: 'ウェブサイト分析プロンプト',
-      description: 'ウェブサイトのSEO分析とユーザビリティの改善案を提案するためのプロンプト',
-      category: 'テクニカル',
-      purpose: 'データ分析',
-      user: 'tech_expert',
-      likes: 542,
-      usage: 1203,
-      date: '2023-10-15'
-    },
-    {
-      id: 2,
-      title: 'ビジネスプラン作成アシスタント',
-      description: 'スタートアップのビジネスプランを段階的に作成するためのプロンプト',
-      category: 'ビジネス',
-      purpose: 'アイデア出し',
-      user: 'entrepreneur',
-      likes: 328,
-      usage: 890,
-      date: '2023-10-10'
-    },
-    {
-      id: 3,
-      title: '小説のプロット展開ヘルパー',
-      description: '小説のストーリー構成やキャラクター設定を支援するプロンプト',
-      category: 'クリエイティブ',
-      purpose: '文章生成',
-      user: 'novelist',
-      likes: 417,
-      usage: 762,
-      date: '2023-10-05'
-    },
-    {
-      id: 4,
-      title: '数学の問題解説ジェネレーター',
-      description: '数学の問題を段階的に解説し、視覚的な説明を含めるプロンプト',
-      category: '教育',
-      purpose: '学習支援',
-      user: 'math_teacher',
-      likes: 289,
-      usage: 1567,
-      date: '2023-09-28'
-    },
-    {
-      id: 5,
-      title: 'コードレビューアシスタント',
-      description: 'コードのバグや最適化の可能性を指摘し、改善案を提案するプロンプト',
-      category: 'テクニカル',
-      purpose: 'コード作成',
-      user: 'senior_dev',
-      likes: 631,
-      usage: 1842,
-      date: '2023-09-20'
-    },
-    {
-      id: 6,
-      title: 'マーケティングコピーライティング支援',
-      description: '効果的な広告コピーやキャッチフレーズを生成するためのプロンプト',
-      category: 'ビジネス',
-      purpose: '文章生成',
-      user: 'marketing_pro',
-      likes: 458,
-      usage: 1203,
-      date: '2023-09-15'
-    }
-  ];
+  // プロンプトデータを取得
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      try {
+        setLoading(true);
+        const response = await promptService.getPrompts({
+          category: filters.category !== 'all' ? filters.category : undefined,
+          purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
+          search: searchQuery || undefined,
+          sort: filters.sort
+        });
+        setPrompts(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('プロンプト取得エラー:', err);
+        setError('プロンプトの取得中にエラーが発生しました。');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrompts();
+  }, [filters, searchQuery]);
 
   // フィルターとソートを適用したプロンプトリスト
-  const filteredPrompts = dummyPrompts.filter(prompt => {
-    // カテゴリフィルター
-    if (filters.category !== 'all' && prompt.category !== filters.category) {
-      return false;
-    }
-    // 用途フィルター
-    if (filters.purpose !== 'all' && prompt.purpose !== filters.purpose) {
-      return false;
-    }
-    // 検索クエリ
-    if (searchQuery && !prompt.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    // ソート
-    switch (filters.sort) {
-      case 'popular':
-        return b.likes - a.likes;
-      case 'most_used':
-        return b.usage - a.usage;
-      case 'latest':
-      default:
-        return new Date(b.date) - new Date(a.date);
-    }
-  });
+  const filteredPrompts = prompts;
 
   // フィルター変更ハンドラー
   const handleFilterChange = (e) => {
@@ -198,10 +133,30 @@ const Explore = () => {
       
       {/* プロンプトリスト */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPrompts.length > 0 ? (
+        {loading ? (
+          // ローディング表示
+          <div className="col-span-3 flex justify-center py-8">
+            <svg className="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        ) : error ? (
+          // エラー表示
+          <div className="col-span-3 text-center py-8">
+            <p className="text-red-500 text-lg">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              再読み込み
+            </button>
+          </div>
+        ) : filteredPrompts.length > 0 ? (
+          // プロンプトリスト表示
           filteredPrompts.map(prompt => (
             <div 
-              key={prompt.id}
+              key={prompt._id}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
             >
               <div className="p-5">
@@ -215,17 +170,19 @@ const Explore = () => {
                 </div>
                 
                 <h3 className="text-xl font-bold mb-2">
-                  <Link to={`/prompt/${prompt.id}`} className="hover:text-blue-600">
+                  <Link to={`/prompt/${prompt._id}`} className="hover:text-blue-600">
                     {prompt.title}
                   </Link>
                 </h3>
                 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {prompt.description}
+                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                  {prompt.content.length > 200 
+                    ? prompt.content.substring(0, 200) + '...' 
+                    : prompt.content}
                 </p>
                 
                 <p className="text-gray-600 text-sm mb-4">
-                  作成者: <span className="font-medium">{prompt.user}</span>
+                  作成者: <span className="font-medium">{prompt.user?.username || 'ユーザー'}</span>
                 </p>
                 
                 <div className="flex justify-between text-sm text-gray-500">
@@ -233,26 +190,27 @@ const Explore = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-red-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                     </svg>
-                    <span>{prompt.likes}</span>
+                    <span>{prompt.likes ? prompt.likes.length : 0}</span>
                   </div>
                   <div className="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                       <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                     </svg>
-                    <span>{prompt.usage}</span>
+                    <span>{prompt.usageCount}</span>
                   </div>
                   <div className="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                     </svg>
-                    <span>{prompt.date}</span>
+                    <span>{new Date(prompt.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
             </div>
           ))
         ) : (
+          // 結果なしの表示
           <div className="col-span-3 text-center py-8">
             <p className="text-gray-500 text-lg">条件に一致するプロンプトが見つかりませんでした。</p>
             <p className="text-gray-500">フィルター条件を変更してみてください。</p>
