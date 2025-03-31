@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { promptService, userService } from '../utils/api';
+import { promptService, userService, authService } from '../utils/api';
 import useAuth from '../hooks/useAuth';
 
 const PromptDetail = () => {
@@ -25,11 +25,21 @@ const PromptDetail = () => {
         
         // ログインしている場合、いいね状態を確認
         if (isAuthenticated && user) {
-          setIsLiked(response.data.likes.includes(user._id));
+          // likesが存在するかチェック
+          if (response.data.likes && Array.isArray(response.data.likes)) {
+            setIsLiked(response.data.likes.includes(user._id));
+          }
           
           // ユーザーの保存状態を確認
-          const userResponse = await userService.getCurrentUser();
-          setIsSaved(userResponse.data.savedPrompts.includes(id));
+          try {
+            const userResponse = await authService.getCurrentUser();
+            if (userResponse.data.savedPrompts && Array.isArray(userResponse.data.savedPrompts)) {
+              setIsSaved(userResponse.data.savedPrompts.includes(id));
+            }
+          } catch (userError) {
+            console.error('ユーザー情報取得エラー:', userError);
+            // エラーが発生しても主要な機能に影響しないようにする
+          }
         }
         
         setError(null);
