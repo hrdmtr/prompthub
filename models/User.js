@@ -36,6 +36,14 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Prompt'
   }],
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -43,7 +51,7 @@ const UserSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// —πÔ¸…nœ√∑Â
+// „Éë„Çπ„ÉØ„Éº„Éâ„Éè„ÉÉ„Ç∑„É•Âåñ
 UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -56,7 +64,7 @@ UserSchema.pre('save', async function(next) {
   }
 });
 
-// —πÔ¸…<·Ω√…
+// „Éë„Çπ„ÉØ„Éº„ÉâÊ§úË®º
 UserSchema.methods.comparePassword = async function(password) {
   return await bcrypt.compare(password, this.password);
 };

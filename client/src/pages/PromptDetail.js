@@ -1,125 +1,168 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { promptService, userService } from '../utils/api';
+import useAuth from '../hooks/useAuth';
 
 const PromptDetail = () => {
   const { id } = useParams();
-  const [commentInput, setCommentInput] = useState('');
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   
-  // プロンプトデータ（後でAPIから取得するように置き換えます）
-  const [prompt, setPrompt] = useState({
-    id: parseInt(id),
-    title: 'コードレビューアシスタント',
-    content: 
-`以下のコードをレビューしてください。
-
-1. バグや潜在的な問題点を指摘する
-2. パフォーマンスの最適化ポイントを示す
-3. コードの可読性や保守性を向上させる提案をする
-4. セキュリティ上の懸念がある場合は警告する
-5. コーディング規約に準拠しているかチェックする
-
-レビュー対象のコード:
-\`\`\`{{language}}
-{{code}}
-\`\`\`
-
-コードの改善例も提示してください。`,
-    category: 'テクニカル',
-    purpose: 'コード作成',
-    user: {
-      id: 1,
-      username: 'senior_dev',
-      avatar: 'https://randomuser.me/api/portraits/men/1.jpg'
-    },
-    tags: ['コードレビュー', 'プログラミング', '最適化'],
-    likes: 631,
-    isSaved: false,
-    isLiked: false,
-    usageCount: 1842,
-    date: '2023-09-20',
-    comments: [
-      {
-        id: 1,
-        user: {
-          id: 2,
-          username: 'code_ninja',
-          avatar: 'https://randomuser.me/api/portraits/women/2.jpg'
-        },
-        content: 'セキュリティの観点からのレビューも非常に役立ちます。特にAPIキーなどの機密情報の扱いに関するチェックが素晴らしいです。',
-        date: '2023-10-05',
-        likes: 12
-      },
-      {
-        id: 2,
-        user: {
-          id: 3,
-          username: 'dev_learner',
-          avatar: 'https://randomuser.me/api/portraits/men/3.jpg'
-        },
-        content: 'このプロンプトを使って自分のコードをレビューしてもらったところ、多くの改善点を指摘してもらえました。特にパフォーマンス面での提案が具体的で助かりました。',
-        date: '2023-09-28',
-        likes: 8
+  const [commentInput, setCommentInput] = useState('');
+  const [prompt, setPrompt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  
+  // プロンプトデータをAPIから取得
+  useEffect(() => {
+    const fetchPromptData = async () => {
+      try {
+        setLoading(true);
+        const response = await promptService.getPromptById(id);
+        setPrompt(response.data);
+        
+        // ログインしている場合、いいね状態を確認
+        if (isAuthenticated && user) {
+          setIsLiked(response.data.likes.includes(user._id));
+          
+          // ユーザーの保存状態を確認
+          const userResponse = await userService.getCurrentUser();
+          setIsSaved(userResponse.data.savedPrompts.includes(id));
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('プロンプト取得エラー:', err);
+        setError('プロンプトの取得中にエラーが発生しました。');
+      } finally {
+        setLoading(false);
       }
-    ]
-  });
-
+    };
+    
+    if (id) {
+      fetchPromptData();
+    }
+  }, [id, isAuthenticated, user]);
+  
   // コメント送信ハンドラー
-  const handleSubmitComment = (e) => {
+  const handleSubmitComment = async (e) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
     
-    // 新しいコメントを追加（後でAPIと連携）
-    const newComment = {
-      id: prompt.comments.length + 1,
-      user: {
-        id: 4, // ログインユーザーID
-        username: 'current_user', // ログインユーザー名
-        avatar: 'https://randomuser.me/api/portraits/men/4.jpg' // ログインユーザーアバター
-      },
-      content: commentInput,
-      date: new Date().toISOString().split('T')[0], // 今日の日付
-      likes: 0
-    };
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/prompt/${id}`, message: 'コメントを投稿するにはログインが必要です' } });
+      return;
+    }
     
-    setPrompt({
-      ...prompt,
-      comments: [newComment, ...prompt.comments]
-    });
-    setCommentInput('');
+    try {
+      const response = await promptService.addComment(id, commentInput);
+      
+      // APIからの応答でプロンプトのコメントを更新
+      setPrompt({
+        ...prompt,
+        comments: response.data
+      });
+      
+      setCommentInput('');
+    } catch (error) {
+      console.error('コメント投稿エラー:', error);
+      alert('コメントの投稿に失敗しました。後でもう一度お試しください。');
+    }
   };
 
   // いいねトグルハンドラー
-  const toggleLike = () => {
-    setPrompt({
-      ...prompt,
-      isLiked: !prompt.isLiked,
-      likes: prompt.isLiked ? prompt.likes - 1 : prompt.likes + 1
-    });
+  const toggleLike = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/prompt/${id}`, message: 'いいねするにはログインが必要です' } });
+      return;
+    }
+    
+    try {
+      const response = await promptService.toggleLike(id);
+      
+      // APIからの応答でいいね状態を更新
+      setPrompt({
+        ...prompt,
+        likes: response.data.likes
+      });
+      
+      setIsLiked(!isLiked);
+    } catch (error) {
+      console.error('いいねエラー:', error);
+      alert('いいねの処理に失敗しました。後でもう一度お試しください。');
+    }
   };
 
   // 保存トグルハンドラー
-  const toggleSave = () => {
-    setPrompt({
-      ...prompt,
-      isSaved: !prompt.isSaved
-    });
+  const toggleSave = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/prompt/${id}`, message: 'プロンプトを保存するにはログインが必要です' } });
+      return;
+    }
+    
+    try {
+      const response = await userService.toggleSavePrompt(id);
+      
+      // 保存状態を更新
+      setIsSaved(!isSaved);
+    } catch (error) {
+      console.error('保存エラー:', error);
+      alert('プロンプトの保存に失敗しました。後でもう一度お試しください。');
+    }
   };
 
   // 使用カウント増加ハンドラー
-  const incrementUsage = () => {
-    setPrompt({
-      ...prompt,
-      usageCount: prompt.usageCount + 1
-    });
-    // ここでAPIを呼び出して使用カウントを更新
+  const incrementUsage = async () => {
+    try {
+      const response = await promptService.incrementUsage(id);
+      
+      // APIからの応答で使用回数を更新
+      setPrompt({
+        ...prompt,
+        usageCount: response.data.usageCount
+      });
+    } catch (error) {
+      console.error('使用カウント更新エラー:', error);
+    }
   };
 
   // プロンプトコピーハンドラー
   const copyPrompt = () => {
-    navigator.clipboard.writeText(prompt.content);
-    alert('プロンプトをクリップボードにコピーしました');
-    incrementUsage();
+    if (prompt && prompt.content) {
+      navigator.clipboard.writeText(prompt.content);
+      alert('プロンプトをクリップボードにコピーしました');
+      incrementUsage();
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto flex justify-center py-12">
+        <div className="animate-spin h-10 w-10 text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error || !prompt) {
+    return (
+      <div className="max-w-4xl mx-auto text-center py-12">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">エラー</p>
+          <p>{error || 'プロンプトが見つかりませんでした'}</p>
+        </div>
+        <Link to="/explore" className="text-blue-600 hover:text-blue-800">
+          探索ページに戻る
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -136,20 +179,18 @@ const PromptDetail = () => {
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center">
-              <img 
-                src={prompt.user.avatar} 
-                alt={prompt.user.username} 
-                className="w-10 h-10 rounded-full mr-3" 
-              />
+              <div className="w-10 h-10 rounded-full mr-3 bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                {prompt.user?.username ? prompt.user.username.charAt(0).toUpperCase() : '?'}
+              </div>
               <div>
-                <p className="font-medium">{prompt.user.username}</p>
-                <p className="text-gray-500 text-sm">{prompt.date}</p>
+                <p className="font-medium">{prompt.user?.username || 'ユーザー'}</p>
+                <p className="text-gray-500 text-sm">{new Date(prompt.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
             <div className="flex space-x-2">
               <button 
                 onClick={toggleSave}
-                className={`p-2 rounded-full ${prompt.isSaved ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'} hover:bg-blue-100 hover:text-blue-600`}
+                className={`p-2 rounded-full ${isSaved ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'} hover:bg-blue-100 hover:text-blue-600`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
@@ -157,7 +198,7 @@ const PromptDetail = () => {
               </button>
               <button 
                 onClick={toggleLike}
-                className={`p-2 rounded-full ${prompt.isLiked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'} hover:bg-red-100 hover:text-red-600`}
+                className={`p-2 rounded-full ${isLiked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'} hover:bg-red-100 hover:text-red-600`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
@@ -178,14 +219,16 @@ const PromptDetail = () => {
           </div>
           
           <div className="flex flex-wrap gap-2 mb-6">
-            {prompt.tags.map(tag => (
-              <span 
-                key={tag} 
-                className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded"
-              >
-                #{tag}
-              </span>
-            ))}
+            {prompt.tags && prompt.tags.length > 0 ? (
+              prompt.tags.map(tag => (
+                <span 
+                  key={tag} 
+                  className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded"
+                >
+                  #{tag}
+                </span>
+              ))
+            ) : null}
           </div>
           
           <div className="bg-gray-50 p-4 rounded-lg mb-6 whitespace-pre-wrap font-mono text-sm">
@@ -198,20 +241,20 @@ const PromptDetail = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                 </svg>
-                <span>{prompt.likes} いいね</span>
+                <span>{prompt.likes ? prompt.likes.length : 0} いいね</span>
               </div>
               <div className="flex items-center text-blue-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                   <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                 </svg>
-                <span>{prompt.usageCount} 回使用</span>
+                <span>{prompt.usageCount || 0} 回使用</span>
               </div>
               <div className="flex items-center text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
-                <span>{prompt.comments.length} コメント</span>
+                <span>{prompt.comments ? prompt.comments.length : 0} コメント</span>
               </div>
             </div>
             
@@ -246,37 +289,27 @@ const PromptDetail = () => {
               <button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                disabled={!commentInput.trim()}
+                disabled={!commentInput.trim() || !isAuthenticated}
               >
-                コメントを投稿
+                {isAuthenticated ? 'コメントを投稿' : 'ログインしてコメントする'}
               </button>
             </div>
           </form>
           
           <div className="space-y-6">
-            {prompt.comments.length > 0 ? (
+            {prompt.comments && prompt.comments.length > 0 ? (
               prompt.comments.map(comment => (
-                <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-0 last:pb-0">
+                <div key={comment._id} className="border-b border-gray-200 pb-6 last:border-0 last:pb-0">
                   <div className="flex items-start">
-                    <img 
-                      src={comment.user.avatar} 
-                      alt={comment.user.username} 
-                      className="w-10 h-10 rounded-full mr-3" 
-                    />
+                    <div className="w-10 h-10 rounded-full mr-3 bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                      {comment.userId?.username ? comment.userId.username.charAt(0).toUpperCase() : '?'}
+                    </div>
                     <div className="flex-grow">
                       <div className="flex justify-between items-center mb-1">
-                        <p className="font-medium">{comment.user.username}</p>
-                        <p className="text-gray-500 text-sm">{comment.date}</p>
+                        <p className="font-medium">{comment.userId?.username || 'ユーザー'}</p>
+                        <p className="text-gray-500 text-sm">{new Date(comment.createdAt).toLocaleDateString()}</p>
                       </div>
                       <p className="text-gray-700 mb-2">{comment.content}</p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <button className="flex items-center hover:text-red-500">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                          </svg>
-                          <span>{comment.likes} いいね</span>
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -287,8 +320,6 @@ const PromptDetail = () => {
           </div>
         </div>
       </div>
-      
-      {/* 類似プロンプト推奨セクション（後で実装予定） */}
     </div>
   );
 };
