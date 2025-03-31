@@ -1,34 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { promptService } from '../utils/api';
 
 const Home = () => {
-  // ダミーデータ（後でAPIから取得するように置き換えます）
-  const featuredPrompts = [
-    {
-      id: 1,
-      title: 'ウェブサイト分析プロンプト',
-      category: 'テクニカル',
-      user: 'tech_expert',
-      likes: 542,
-      usage: 1203
-    },
-    {
-      id: 2,
-      title: 'ビジネスプラン作成アシスタント',
-      category: 'ビジネス',
-      user: 'entrepreneur',
-      likes: 328,
-      usage: 890
-    },
-    {
-      id: 3,
-      title: '小説のプロット展開ヘルパー',
-      category: 'クリエイティブ',
-      user: 'novelist',
-      likes: 417,
-      usage: 762
-    }
-  ];
+  const [featuredPrompts, setFeaturedPrompts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // APIからプロンプトを取得
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      try {
+        setLoading(true);
+        const response = await promptService.getPrompts({ sort: 'popular', limit: 3 });
+        setFeaturedPrompts(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('プロンプト取得エラー:', err);
+        setError('プロンプトの取得中にエラーが発生しました。');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPrompts();
+  }, []);
 
   return (
     <div>
@@ -67,53 +63,76 @@ const Home = () => {
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredPrompts.map(prompt => (
-            <div 
-              key={prompt.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                    {prompt.category}
-                  </span>
-                  <button className="text-gray-400 hover:text-blue-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <h3 className="text-xl font-bold mb-2">
-                  <Link to={`/prompt/${prompt.id}`} className="hover:text-blue-600">
-                    {prompt.title}
-                  </Link>
-                </h3>
-                
-                <p className="text-gray-600 text-sm mb-4">
-                  作成者: <span className="font-medium">{prompt.user}</span>
-                </p>
-                
-                <div className="flex justify-between text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                    </svg>
-                    <span>{prompt.likes}</span>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin h-10 w-10 text-blue-500">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : featuredPrompts.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">まだプロンプトがありません。最初のプロンプトを作成しましょう！</p>
+            <Link to="/create" className="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+              プロンプトを作成する
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredPrompts.map(prompt => (
+              <div 
+                key={prompt._id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                      {prompt.category}
+                    </span>
                   </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>{prompt.usage}</span>
+                  
+                  <h3 className="text-xl font-bold mb-2">
+                    <Link to={`/prompt/${prompt._id}`} className="hover:text-blue-600">
+                      {prompt.title}
+                    </Link>
+                  </h3>
+                  
+                  <p className="text-gray-600 text-sm mb-4">
+                    作成者: <span className="font-medium">{prompt.user?.username || 'ユーザー'}</span>
+                  </p>
+                  
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                      <span>{prompt.likes ? prompt.likes.length : 0}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                      </svg>
+                      <span>{prompt.usageCount || 0}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      <span>{new Date(prompt.createdAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 機能紹介 */}

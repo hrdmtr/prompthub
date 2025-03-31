@@ -8,7 +8,7 @@ const auth = require('../middleware/auth');
 // プロンプト一覧取得
 router.get('/', async (req, res) => {
   try {
-    const { category, purpose, search, sort = 'latest' } = req.query;
+    const { category, purpose, search, sort = 'latest', limit = 0 } = req.query;
     const query = {};
     
     // カテゴリフィルター
@@ -44,10 +44,18 @@ router.get('/', async (req, res) => {
         sortOption = { createdAt: -1 };
     }
     
-    const prompts = await Prompt.find(query)
+    // クエリの作成
+    let promptQuery = Prompt.find(query)
       .sort(sortOption)
       .populate('user', 'username avatar')
       .populate('comments.userId', 'username avatar');
+    
+    // 件数制限（limitが0より大きい場合のみ適用）
+    if (parseInt(limit) > 0) {
+      promptQuery = promptQuery.limit(parseInt(limit));
+    }
+    
+    const prompts = await promptQuery;
       
     res.json(prompts);
   } catch (error) {
