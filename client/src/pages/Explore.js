@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { promptService } from '../utils/api';
+import axios from 'axios';
 
 const Explore = () => {
   // フィルター状態
@@ -23,17 +24,74 @@ const Explore = () => {
     const fetchPrompts = async () => {
       try {
         setLoading(true);
-        const response = await promptService.getPrompts({
-          category: filters.category !== 'all' ? filters.category : undefined,
-          purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
-          search: searchQuery || undefined,
-          sort: filters.sort
-        });
-        setPrompts(response.data);
-        setError(null);
+        
+        // CORSプロキシのリスト
+        const CORS_PROXIES = [
+          { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
+          { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
+          { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' }
+        ];
+        
+        // プロキシインデックスの取得
+        const proxyIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10) % CORS_PROXIES.length;
+        const selectedProxy = CORS_PROXIES[proxyIndex];
+        
+        // 通常の方法でまず試す
+        try {
+          console.log('通常のAPIで試行...');
+          const response = await promptService.getPrompts({
+            category: filters.category !== 'all' ? filters.category : undefined,
+            purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
+            search: searchQuery || undefined,
+            sort: filters.sort
+          });
+          setPrompts(response.data);
+          setError(null);
+          console.log('標準APIコールが成功');
+          return; // 成功したら終了
+        } catch (standardError) {
+          console.warn('標準APIコールが失敗:', standardError.message);
+          // 失敗したら直接CORSプロキシを使用
+        }
+        
+        // ダイレクトプロキシを使用（バックアップアプローチ）
+        console.log(`CORSプロキシを使用: ${selectedProxy.name}`);
+        const apiUrl = 'https://prompthub-api.onrender.com/api/prompts';
+        
+        // クエリパラメータを構築
+        const queryParams = new URLSearchParams();
+        if (filters.category !== 'all') queryParams.append('category', filters.category);
+        if (filters.purpose !== 'all') queryParams.append('purpose', filters.purpose);
+        if (searchQuery) queryParams.append('search', searchQuery);
+        queryParams.append('sort', filters.sort);
+        
+        // 完全なURLを構築
+        const fullUrl = `${apiUrl}?${queryParams.toString()}`;
+        console.log('完全なURL:', fullUrl);
+        
+        // プロキシURLを構築
+        const proxyUrl = `${selectedProxy.url}${encodeURIComponent(fullUrl)}`;
+        console.log('プロキシURL:', proxyUrl);
+        
+        // 直接Axiosでリクエスト
+        const directResponse = await axios.get(proxyUrl);
+        console.log('プロキシ経由で成功:', directResponse);
+        
+        if (directResponse.data) {
+          setPrompts(directResponse.data);
+          setError(null);
+        } else {
+          throw new Error('無効なレスポンスデータ');
+        }
       } catch (err) {
         console.error('プロンプト取得エラー:', err);
-        setError('プロンプトの取得中にエラーが発生しました。');
+        
+        // プロキシインデックスを変更
+        const currentIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
+        const nextIndex = (currentIndex + 1) % CORS_PROXIES.length;
+        localStorage.setItem('cors_proxy_index', nextIndex.toString());
+        
+        setError('プロンプトの取得中にエラーが発生しました。再読み込みしてください。');
       } finally {
         setLoading(false);
       }
@@ -55,7 +113,19 @@ const Explore = () => {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8">プロンプトを探す</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">プロンプトを探す</h1>
+        <div className="text-sm text-gray-500">
+          接続: 
+          {loading ? (
+            <span className="ml-1 text-yellow-500">取得中...</span>
+          ) : error ? (
+            <span className="ml-1 text-red-500">エラー</span>
+          ) : (
+            <span className="ml-1 text-green-500">成功 (プロキシ #{localStorage.getItem('cors_proxy_index') || '0'})</span>
+          )}
+        </div>
+      </div>
       
       {/* 検索・フィルターセクション */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
@@ -145,12 +215,30 @@ const Explore = () => {
           // エラー表示
           <div className="col-span-3 text-center py-8">
             <p className="text-red-500 text-lg">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              再読み込み
-            </button>
+            <div className="flex justify-center space-x-4 mt-4">
+              <button 
+                onClick={() => {
+                  // プロキシを切り替え
+                  const currentIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
+                  const nextIndex = (currentIndex + 1) % 3; // プロキシの数
+                  localStorage.setItem('cors_proxy_index', nextIndex.toString());
+                  console.log(`プロキシを変更: ${currentIndex} → ${nextIndex}`);
+                  window.location.reload();
+                }} 
+                className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+              >
+                別のプロキシで試す
+              </button>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                再読み込み
+              </button>
+            </div>
+            <div className="mt-4 text-sm text-gray-500">
+              現在のプロキシインデックス: {localStorage.getItem('cors_proxy_index') || '0'}
+            </div>
           </div>
         ) : filteredPrompts.length > 0 ? (
           // プロンプトリスト表示
