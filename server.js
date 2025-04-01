@@ -131,29 +131,114 @@ app.use('/api/auth', authRoutes);
 
 // デバッグ情報を表示
 console.log('Current directory:', __dirname);
-console.log('Looking for client/build at:', path.join(__dirname, 'client/build'));
-console.log('File exists check:', require('fs').existsSync(path.join(__dirname, 'client/build')));
-console.log('Directory contents:', require('fs').readdirSync(__dirname, { withFileTypes: true })
+const fs = require('fs');
+
+// 可能性のあるビルドパスをチェック
+const buildPaths = [
+  path.join(__dirname, 'client/build'),
+  path.join(__dirname, 'build'),
+  path.join(process.cwd(), 'client/build'),
+  path.join(process.cwd(), 'build')
+];
+
+// 各パスの存在をチェック
+buildPaths.forEach(p => {
+  console.log(`Path check: ${p} - exists: ${fs.existsSync(p)}`);
+  if (fs.existsSync(p)) {
+    try {
+      console.log(`Contents of ${p}:`, fs.readdirSync(p).slice(0, 10)); // 最初の10ファイルのみ表示
+    } catch (e) {
+      console.log(`Error reading ${p}:`, e.message);
+    }
+  }
+});
+
+// ディレクトリコンテンツも表示
+console.log('Root directory contents:', fs.readdirSync(__dirname, { withFileTypes: true })
   .map(dirent => dirent.name));
 
-// パスの確認
-const clientBuildPath = path.resolve(__dirname, 'client/build');
-const indexHtmlPath = path.resolve(__dirname, 'client/build/index.html');
+// 最適なビルドパスを見つける
+let clientBuildPath = null;
+let indexHtmlPath = null;
+
+for (const bp of buildPaths) {
+  const indexPath = path.join(bp, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    clientBuildPath = bp;
+    indexHtmlPath = indexPath;
+    console.log('Found build at:', clientBuildPath);
+    break;
+  }
+}
+
+// 見つからない場合はデフォルトを使用
+if (!clientBuildPath) {
+  console.log('No build directory found, using default path');
+  clientBuildPath = path.resolve(__dirname, 'client/build');
+  indexHtmlPath = path.resolve(__dirname, 'client/build/index.html');
+}
 
 // 本番環境ではReactアプリを提供
 if (process.env.NODE_ENV === 'production') {
-  // 静的ファイルの提供
-  console.log('Serving static files from:', clientBuildPath);
-  app.use(express.static(clientBuildPath));
+  // 追加のビルドディレクトリチェック（最終手段）
+  if (!fs.existsSync(clientBuildPath)) {
+    console.log('ビルドパスが存在しません。手動で作成を試みます...');
+    try {
+      // シェルコマンドでビルドを試行
+      const { execSync } = require('child_process');
+      execSync('cd client && npm install && npm run build', { stdio: 'inherit' });
+      console.log('クライアントビルド成功');
+    } catch (e) {
+      console.error('クライアントビルド失敗:', e.message);
+    }
+  }
+  
+  // 複数の可能なディレクトリをチェック＆提供
+  [clientBuildPath, path.join(__dirname, 'build')].forEach(buildPath => {
+    if (fs.existsSync(buildPath)) {
+      console.log('Serving static files from:', buildPath);
+      app.use(express.static(buildPath));
+    }
+  });
   
   // すべてのルートをindexにリダイレクト
   app.get('*', (req, res) => {
-    console.log('Sending index.html from:', indexHtmlPath);
-    if (require('fs').existsSync(indexHtmlPath)) {
-      res.sendFile(indexHtmlPath);
-    } else {
-      res.status(404).send('Build files not found. Make sure the client build has completed.');
+    // APIリクエストは無視（404を返すようにする）
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).send('API endpoint not found');
     }
+    
+    // 複数の可能なindex.htmlの場所をチェック
+    const possibleIndexPaths = [
+      indexHtmlPath,
+      path.join(__dirname, 'build/index.html'),
+      path.join(__dirname, 'client/build/index.html'),
+      path.join(process.cwd(), 'build/index.html'),
+      path.join(process.cwd(), 'client/build/index.html')
+    ];
+    
+    // 存在する最初のindex.htmlを提供
+    for (const indexPath of possibleIndexPaths) {
+      if (fs.existsSync(indexPath)) {
+        console.log('Sending index.html from:', indexPath);
+        return res.sendFile(indexPath);
+      }
+    }
+    
+    // 見つからない場合はエラーページ
+    res.status(404).send(`
+      <html>
+        <head><title>PromptHub - Build Error</title></head>
+        <body>
+          <h1>Build files not found</h1>
+          <p>The React build files could not be located. The server is running but the client files are missing.</p>
+          <p>Checked paths:</p>
+          <ul>${possibleIndexPaths.map(p => `<li>${p} - ${fs.existsSync(p) ? 'exists' : 'missing'}</li>`).join('')}</ul>
+          <p>Server directory contents:</p>
+          <ul>${fs.readdirSync(__dirname).map(file => `<li>${file}</li>`).join('')}</ul>
+        </body>
+      </html>
+    `);
   });
 }
 
