@@ -68,42 +68,9 @@ export const LineShareButton = ({ url, title, children }) => {
   );
 };
 
-// Facebookシェアボタンコンポーネント
-export const FacebookShareButton = ({ url, quote, children }) => {
-  const handleClick = () => {
-    // Facebookシェア用URL作成
-    const shareUrl = new URL('https://www.facebook.com/sharer/sharer.php');
-    shareUrl.searchParams.append('u', url);
-    
-    if (quote) {
-      shareUrl.searchParams.append('quote', quote);
-    }
-    
-    // 新しいウィンドウでFacebookシェア画面を開く
-    window.open(shareUrl.toString(), '_blank', 'width=550,height=420');
-  };
-  
-  return (
-    <button 
-      onClick={handleClick}
-      className="flex items-center justify-center p-2 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-md transition-colors"
-      aria-label="Facebookでシェア"
-    >
-      {children || (
-        <>
-          <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 320 512">
-            <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/>
-          </svg>
-          <span>シェア</span>
-        </>
-      )}
-    </button>
-  );
-};
-
 // 共有用URLと情報のフォーマット関数
 export const formatShareContent = (prompt, baseUrl) => {
-  if (!prompt) return { url: '', title: '', quote: '', hashtags: [] };
+  if (!prompt) return { url: '', title: '', hashtags: [] };
   
   // ベースURLがない場合は現在のURLを使用
   const url = baseUrl || window.location.href;
@@ -111,12 +78,6 @@ export const formatShareContent = (prompt, baseUrl) => {
   // タイトルとプロンプトの冒頭を含める（文字数制限あり）
   const titlePrefix = 'PromptHubでプロンプトを共有: ';
   const title = `${titlePrefix}${prompt.title}`;
-  
-  // 詳細引用用テキスト
-  const contentPreview = prompt.content.length > 100 
-    ? prompt.content.substring(0, 100) + '...' 
-    : prompt.content;
-  const quote = `${prompt.title} - ${contentPreview}`;
   
   // ハッシュタグ設定
   const hashtags = ['PromptHub'];
@@ -133,5 +94,5 @@ export const formatShareContent = (prompt, baseUrl) => {
   if (prompt.category) hashtags.push(prompt.category);
   if (prompt.service && prompt.service !== 'その他') hashtags.push(prompt.service);
   
-  return { url, title, quote, hashtags };
+  return { url, title, hashtags };
 };
