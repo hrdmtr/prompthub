@@ -22,31 +22,38 @@ console.log('- JWT_SECRET:', process.env.JWT_SECRET ? '設定済み' : '未設�
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ミドルウェア - CORSを設定（すべてのオリジンを許可する緊急対応）
+// すべてのリクエストに対してCORSヘッダーを設定する特殊ミドルウェア（最優先）
+app.use((req, res, next) => {
+  // CORSヘッダーを無条件に設定
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  
+  // OPTIONSリクエストに即座に応答
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// 通常のCORS設定（念のため残しておく）
 app.use(cors({
-  origin: '*', // すべてのオリジンからのリクエストを許可（緊急対応）
-  credentials: true,
+  origin: '*', // すべてのオリジンからのリクエストを許可
+  credentials: false, // CORSをシンプルにするために無効化
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
 }));
 
-// CORSデバッグとすべてのリクエストに対するCORSヘッダー追加
+// シンプルなリクエストログと追加のデバッグ情報
 app.use((req, res, next) => {
-  console.log('Request received from:', req.headers.origin);
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
   
-  // すべてのリクエストに対してCORSヘッダーを設定（緊急対応）
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  res.header('Access-Control-Max-Age', '86400'); // プリフライトリクエストのキャッシュ（24時間）
+  // リクエストヘッダーの詳細（デバッグ用）
+  console.log('Request headers:', JSON.stringify(req.headers));
   
-  // OPTIONS リクエスト（preflight リクエスト）の即時レスポンス
-  if (req.method === 'OPTIONS') {
-    console.log('Immediately responding to OPTIONS request');
-    return res.status(204).send();
-  }
+  // すでに設定されたレスポンスヘッダーを確認（デバッグ用）
+  console.log('Current response headers:', res._headers || 'not available');
   
   next();
 });
@@ -142,9 +149,27 @@ const connectWithRetry = () => {
 // 接続開始
 connectWithRetry();
 
+// APIルート用のCORSミドルウェア（特に認証関連）
+app.use('/api', (req, res, next) => {
+  // API専用のCORSヘッダー
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request for API endpoint:', req.url);
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 // テスト用の基本APIエンドポイント
 app.get('/api/test', (req, res) => {
   // CORS関連のデバッグ情報を返す
+  res.header('Access-Control-Allow-Origin', '*'); // 念のため再設定
+  
   res.json({ 
     message: 'API is working!',
     cors: {
@@ -152,22 +177,33 @@ app.get('/api/test', (req, res) => {
       method: req.method,
       'access-control-allow-origin': res.getHeader('Access-Control-Allow-Origin'),
       'content-type': res.getHeader('Content-Type'),
-      headers: req.headers
-    }
+      headers: req.headers,
+      responseHeaders: res._headers || 'not available'
+    },
+    time: new Date().toISOString()
   });
 });
 
 // CORS専用テストエンドポイント
-app.get('/api/cors-test', (req, res) => {
+app.all('/api/cors-test', (req, res) => {
   // 明示的なCORSヘッダーを設定
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', '*');
+  
+  // メソッドに応じた処理
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
   
   // テスト結果を返す
   res.json({ 
     success: true, 
     message: 'CORS is working properly',
-    requestOrigin: req.headers.origin || 'not provided'
+    method: req.method,
+    requestOrigin: req.headers.origin || 'not provided',
+    headers: req.headers,
+    time: new Date().toISOString()
   });
 });
 
