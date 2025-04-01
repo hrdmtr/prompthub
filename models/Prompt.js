@@ -64,6 +64,14 @@ const PromptSchema = new mongoose.Schema({
   isFeatured: {
     type: Boolean,
     default: false
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

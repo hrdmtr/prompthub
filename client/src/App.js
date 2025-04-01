@@ -10,6 +10,8 @@ import Home from './pages/Home';
 import Explore from './pages/Explore';
 import PromptDetail from './pages/PromptDetail';
 import CreatePrompt from './pages/CreatePrompt';
+import EditPrompt from './pages/EditPrompt';
+import ManagePrompts from './pages/ManagePrompts';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
@@ -25,6 +27,8 @@ function App() {
             <Route path="/explore" element={<Explore />} />
             <Route path="/prompt/:id" element={<PromptDetail />} />
             <Route path="/create" element={<CreatePrompt />} />
+            <Route path="/edit-prompt/:id" element={<EditPrompt />} />
+            <Route path="/manage-prompts" element={<ManagePrompts />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/version" element={<Version />} />

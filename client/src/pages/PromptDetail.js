@@ -198,9 +198,22 @@ const PromptDetail = () => {
               </div>
             </div>
             <div className="flex space-x-2">
+              {/* プロンプト所有者の場合、編集ボタンを表示 */}
+              {isAuthenticated && user && prompt.user && prompt.user._id === user._id && (
+                <Link 
+                  to={`/edit-prompt/${prompt._id}`}
+                  className="p-2 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                  title="プロンプトを編集"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                </Link>
+              )}
               <button 
                 onClick={toggleSave}
                 className={`p-2 rounded-full ${isSaved ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'} hover:bg-blue-100 hover:text-blue-600`}
+                title={isSaved ? "保存済み" : "保存する"}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
@@ -209,6 +222,7 @@ const PromptDetail = () => {
               <button 
                 onClick={toggleLike}
                 className={`p-2 rounded-full ${isLiked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'} hover:bg-red-100 hover:text-red-600`}
+                title={isLiked ? "いいね済み" : "いいねする"}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />

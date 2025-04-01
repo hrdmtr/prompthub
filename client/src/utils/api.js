@@ -302,7 +302,9 @@ export const promptService = {
   getPrompts: (params = {}) => api.get('/prompts', { params }),
   
   // プロンプト詳細取得
-  getPromptById: (id) => api.get(`/prompts/${id}`),
+  getPromptById: (id, showDeleted = false) => api.get(`/prompts/${id}`, { 
+    params: { showDeleted: showDeleted ? 'true' : 'false' } 
+  }),
   
   // プロンプト作成
   createPrompt: (promptData) => api.post('/prompts', promptData),
@@ -310,8 +312,14 @@ export const promptService = {
   // プロンプト更新
   updatePrompt: (id, promptData) => api.put(`/prompts/${id}`, promptData),
   
-  // プロンプト削除
+  // プロンプト削除（論理削除）
   deletePrompt: (id) => api.delete(`/prompts/${id}`),
+  
+  // プロンプト復元
+  restorePrompt: (id) => api.put(`/prompts/restore/${id}`),
+  
+  // 削除済みプロンプト一覧取得（管理画面用）
+  getDeletedPrompts: () => api.get('/prompts', { params: { showDeleted: 'true' } }),
   
   // いいね追加/削除
   toggleLike: (id) => api.put(`/prompts/like/${id}`),

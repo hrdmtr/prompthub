@@ -8,8 +8,13 @@ const auth = require('../middleware/auth');
 // プロンプト一覧取得
 router.get('/', async (req, res) => {
   try {
-    const { category, purpose, search, sort = 'latest', limit = 0 } = req.query;
+    const { category, purpose, search, sort = 'latest', limit = 0, showDeleted = 'false' } = req.query;
     const query = {};
+    
+    // 論理削除されたプロンプトの除外（管理者モードでない場合）
+    if (showDeleted !== 'true') {
+      query.isDeleted = { $ne: true };
+    }
     
     // カテゴリフィルター
     if (category && category !== 'all') {
@@ -67,7 +72,15 @@ router.get('/', async (req, res) => {
 // プロンプト詳細取得
 router.get('/:id', async (req, res) => {
   try {
-    const prompt = await Prompt.findById(req.params.id)
+    const { showDeleted = 'false' } = req.query;
+    const query = { _id: req.params.id };
+    
+    // 論理削除されたプロンプトの除外（管理者モードでない場合）
+    if (showDeleted !== 'true') {
+      query.isDeleted = { $ne: true };
+    }
+    
+    const prompt = await Prompt.findOne(query)
       .populate('user', 'username avatar')
       .populate('comments.userId', 'username avatar');
       
@@ -150,7 +163,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// プロンプト削除
+// プロンプト論理削除
 router.delete('/:id', auth, async (req, res) => {
   try {
     // プロンプト所有者チェック
@@ -163,20 +176,52 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: '権限がありません' });
     }
     
-    await Prompt.findByIdAndDelete(req.params.id);
+    // 論理削除を実行
+    prompt.isDeleted = true;
+    prompt.deletedAt = new Date();
+    await prompt.save();
     
-    // ユーザーのプロンプト配列から削除
-    await User.findByIdAndUpdate(req.user.id, {
-      $pull: { prompts: req.params.id }
+    // 注意: ユーザーのプロンプト配列からは削除しない
+    // 復元可能性を維持するために関連付けをそのまま残す
+    
+    res.json({ 
+      message: 'プロンプトを削除しました',
+      deletedAt: prompt.deletedAt,
+      isDeleted: true
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'サーバーエラーが発生しました' });
+  }
+});
+
+// プロンプト復元
+router.put('/restore/:id', auth, async (req, res) => {
+  try {
+    // プロンプト所有者チェック
+    const prompt = await Prompt.findById(req.params.id);
+    if (!prompt) {
+      return res.status(404).json({ message: 'プロンプトが見つかりません' });
+    }
     
-    // 他のユーザーの保存済みプロンプトから削除
-    await User.updateMany(
-      { savedPrompts: req.params.id },
-      { $pull: { savedPrompts: req.params.id } }
-    );
+    if (prompt.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: '権限がありません' });
+    }
     
-    res.json({ message: 'プロンプトを削除しました' });
+    // 削除状態を確認
+    if (!prompt.isDeleted) {
+      return res.status(400).json({ message: 'このプロンプトは削除されていません' });
+    }
+    
+    // 復元を実行
+    prompt.isDeleted = false;
+    prompt.deletedAt = null;
+    await prompt.save();
+    
+    res.json({ 
+      message: 'プロンプトを復元しました',
+      isDeleted: false 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'サーバーエラーが発生しました' });
