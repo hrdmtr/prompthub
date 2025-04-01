@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+// CORSプロキシのリスト
+const CORS_PROXIES = [
+  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
+  { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' },
+  { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' }
+];
+
 // バージョン情報ページコンポーネント
 const Version = () => {
   const [clientInfo, setClientInfo] = useState({
@@ -60,12 +67,7 @@ const Version = () => {
         let corsProxyIndex = localStorage.getItem('cors_proxy_index') || '0';
         corsProxyIndex = parseInt(corsProxyIndex, 10) || 0;
         
-        // CORSプロキシリスト
-        const CORS_PROXIES = [
-          { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
-          { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' },
-          { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' }
-        ];
+        // CORS_PROXIESはコンポーネント外で定義されています
         
         // 選択されたプロキシを使用
         const proxy = CORS_PROXIES[corsProxyIndex % CORS_PROXIES.length];

@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { promptService } from '../utils/api';
 import axios from 'axios';
 
+// CORSプロキシのリスト（コンポーネント外に定義して、ESLintエラーを回避）
+const CORS_PROXIES = [
+  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
+  { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
+  { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' }
+];
+
 const Explore = () => {
   // フィルター状態
   const [filters, setFilters] = useState({
@@ -25,12 +32,7 @@ const Explore = () => {
       try {
         setLoading(true);
         
-        // CORSプロキシのリスト
-        const CORS_PROXIES = [
-          { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
-          { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
-          { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' }
-        ];
+        // CORS_PROXIESはコンポーネント外で定義されています
         
         // プロキシインデックスの取得
         const proxyIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10) % CORS_PROXIES.length;
@@ -247,7 +249,7 @@ const Explore = () => {
                 onClick={() => {
                   // プロキシを切り替え
                   const currentIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
-                  const nextIndex = (currentIndex + 1) % 3; // プロキシの数
+                  const nextIndex = (currentIndex + 1) % CORS_PROXIES.length;
                   localStorage.setItem('cors_proxy_index', nextIndex.toString());
                   console.log(`プロキシを変更: ${currentIndex} → ${nextIndex}`);
                   window.location.reload();
