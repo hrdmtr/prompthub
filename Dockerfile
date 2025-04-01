@@ -19,6 +19,10 @@ WORKDIR /app/client
 RUN npm run build
 WORKDIR /app
 
+# ビルド結果確認
+RUN ls -la /app/client/build
+RUN if [ ! -f /app/client/build/index.html ]; then echo "ERROR: index.html not found in build directory" && exit 1; fi
+
 # 環境変数を設定
 ENV NODE_ENV=production
 ENV PORT=8080

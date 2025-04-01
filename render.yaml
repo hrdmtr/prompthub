@@ -1,16 +1,17 @@
 services:
-  # 単一のサービスとしてバックエンドとフロントエンドを統合
+  # Dockerではなく、ビルドパック（Node.js）を使用
   - type: web
     name: prompthub
-    env: docker
+    env: node
     region: singapore # 任意のリージョンを選択
-    dockerfilePath: ./Dockerfile
+    buildCommand: npm run render-build
+    startCommand: npm start
     healthCheckPath: /api/test
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 8080
+        value: 10000
       - key: MONGODB_URI
         sync: false # Renderダッシュボードで設定
       - key: JWT_SECRET

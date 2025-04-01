@@ -39,12 +39,31 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 
+// デバッグ情報を表示
+console.log('Current directory:', __dirname);
+console.log('Looking for client/build at:', path.join(__dirname, 'client/build'));
+console.log('File exists check:', require('fs').existsSync(path.join(__dirname, 'client/build')));
+console.log('Directory contents:', require('fs').readdirSync(__dirname, { withFileTypes: true })
+  .map(dirent => dirent.name));
+
+// パスの確認
+const clientBuildPath = path.resolve(__dirname, 'client/build');
+const indexHtmlPath = path.resolve(__dirname, 'client/build/index.html');
+
 // 本番環境ではReactアプリを提供
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
+  // 静的ファイルの提供
+  console.log('Serving static files from:', clientBuildPath);
+  app.use(express.static(clientBuildPath));
   
+  // すべてのルートをindexにリダイレクト
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+    console.log('Sending index.html from:', indexHtmlPath);
+    if (require('fs').existsSync(indexHtmlPath)) {
+      res.sendFile(indexHtmlPath);
+    } else {
+      res.status(404).send('Build files not found. Make sure the client build has completed.');
+    }
   });
 }
 

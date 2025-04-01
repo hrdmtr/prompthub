@@ -108,8 +108,10 @@ docker run -p 8080:8080 --env-file .env prompthub
    - Renderダッシュボードで新規「Blueprint」を作成
    - リポジトリとブランチを選択
 3. 環境変数の設定:
-   - `MONGODB_URI`: MongoDB接続文字列
+   - `MONGODB_URI`: MongoDB接続文字列（MongoDB AtlasなどのクラウドサービスのURLを使用）
    - `JWT_SECRET`: JWTトークン用の秘密鍵
+
+**注意**: Renderデプロイには Node.js ビルドパックを使用しています。Dockerfileはローカル開発とテスト用です。
 
 詳細は[CLAUDE.md](CLAUDE.md)を参照してください。
 
