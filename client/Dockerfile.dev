@@ -1,0 +1,21 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# パッケージファイルをコピー
+COPY package*.json ./
+
+# 依存関係をインストール
+RUN npm install
+
+# ソースコードをコピー
+COPY . .
+
+# 環境変数を設定
+ENV PORT=3000
+
+# ポートを公開
+EXPOSE 3000
+
+# 開発サーバー起動
+CMD ["npm", "start"]

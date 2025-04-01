@@ -22,6 +22,25 @@ Renderダッシュボードにログインします。
 
 PromptHubのリポジトリを選択します。
 
+### 💡 Docker vs ビルドパック
+
+このプロジェクトではDockerfileを使用したデプロイもサポートしています。render.yamlは`env: docker`を使用してDockerfileでのデプロイを指定していますが、以下のように変更することでビルドパック方式にすることも可能です：
+
+```yaml
+services:
+  - type: web
+    name: prompthub-api
+    env: node  # dockerからnodeに変更
+    buildCommand: npm install
+    startCommand: npm start
+    # dockerfilePathは削除
+```
+
+Dockerfileを使用する主なメリット：
+- 環境の一貫性が高まる
+- ローカル開発とデプロイ環境の差異が減る
+- カスタマイズの自由度が高い
+
 ### 4. 環境変数の設定
 
 `prompthub-api` サービスに以下の環境変数を設定します：

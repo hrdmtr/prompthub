@@ -2,10 +2,9 @@ services:
   # バックエンドAPI
   - type: web
     name: prompthub-api
-    env: node
+    env: docker
     region: singapore # 任意のリージョンを選択
-    buildCommand: npm install
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/test
     envVars:
       - key: NODE_ENV

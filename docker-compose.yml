@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # MongoDBサービス
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - prompthub-network
+
+  # バックエンドAPIサービス
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prompthub-api
+    restart: always
+    ports:
+      - "5001:8080"
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - MONGODB_URI=mongodb://mongodb:27017/prompthub
+      - JWT_SECRET=your_development_jwt_secret
+      - CLIENT_URL=http://localhost:3000
+    networks:
+      - prompthub-network
+
+  # フロントエンドサービス（開発モード）
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: prompthub-client
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    networks:
+      - prompthub-network
+
+# ボリューム定義
+volumes:
+  mongo_data:
+
+# ネットワーク定義
+networks:
+  prompthub-network:
+    driver: bridge
