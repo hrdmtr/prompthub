@@ -39,6 +39,15 @@ const PromptSchema = new mongoose.Schema({
     required: true,
     enum: ['文章生成', 'コード作成', 'データ分析', '画像生成', '要約', 'アイデア出し', '学習支援', 'その他']
   },
+  service: {
+    type: String,
+    enum: ['OpenAI', 'Anthropic', 'Google', 'Microsoft', 'Stability AI', 'Midjourney', 'その他'],
+    default: 'その他'
+  },
+  model: {
+    type: String,
+    trim: true
+  },
   tags: [{
     type: String,
     trim: true

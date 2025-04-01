@@ -85,7 +85,7 @@ router.get('/:id', async (req, res) => {
 // プロンプト作成
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, content, category, purpose, tags } = req.body;
+    const { title, content, category, purpose, service, model, tags } = req.body;
     
     const newPrompt = new Prompt({
       title,
@@ -93,6 +93,8 @@ router.post('/', auth, async (req, res) => {
       user: req.user.id,
       category,
       purpose,
+      service: service || 'その他',
+      model,
       tags: tags || []
     });
     
@@ -113,7 +115,7 @@ router.post('/', auth, async (req, res) => {
 // プロンプト更新
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { title, content, category, purpose, tags } = req.body;
+    const { title, content, category, purpose, service, model, tags } = req.body;
     
     // プロンプト所有者チェック
     const prompt = await Prompt.findById(req.params.id);
@@ -131,6 +133,8 @@ router.put('/:id', auth, async (req, res) => {
     if (content) updateData.content = content;
     if (category) updateData.category = category;
     if (purpose) updateData.purpose = purpose;
+    if (service) updateData.service = service;
+    if (model !== undefined) updateData.model = model;
     if (tags) updateData.tags = tags;
     
     const updatedPrompt = await Prompt.findByIdAndUpdate(

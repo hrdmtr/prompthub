@@ -12,6 +12,8 @@ const CreatePrompt = () => {
     content: '',
     category: '',
     purpose: '',
+    service: 'その他',
+    model: '',
     tags: []
   });
   
@@ -169,6 +171,47 @@ const CreatePrompt = () => {
                 <option value="その他">その他</option>
               </select>
               {errors.purpose && <p className="mt-1 text-sm text-red-500">{errors.purpose}</p>}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label htmlFor="service" className="block text-sm font-medium text-gray-700 mb-1">
+                AIサービス
+              </label>
+              <select
+                id="service"
+                name="service"
+                value={promptData.service}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="OpenAI">OpenAI (ChatGPT/GPT-4など)</option>
+                <option value="Anthropic">Anthropic (Claude)</option>
+                <option value="Google">Google (Gemini)</option>
+                <option value="Microsoft">Microsoft (Copilot)</option>
+                <option value="Stability AI">Stability AI (Stable Diffusion)</option>
+                <option value="Midjourney">Midjourney</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+            
+            <div>
+              <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-1">
+                モデル名
+              </label>
+              <input
+                type="text"
+                id="model"
+                name="model"
+                value={promptData.model}
+                onChange={handleChange}
+                placeholder="例: GPT-4, Claude 3 Opus, Gemini Pro など"
+                className="w-full p-3 border rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                具体的なモデル名を入力してください（例: GPT-4, Claude 3 Opus, Gemini Pro など）
+              </p>
             </div>
           </div>
           
