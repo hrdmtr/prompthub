@@ -6,42 +6,46 @@ console.log('API URL Config:', {
   REACT_APP_API_URL: process.env.REACT_APP_API_URL
 });
 
-// CORSエラーを回避するプロキシサービス
-const CORS_PROXY = 'https://corsproxy.io/?';
+// 確実にCORS問題を解決するために複数のプロキシを用意
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://cors-anywhere.herokuapp.com/',
+  'https://proxy.cors.sh/'
+];
 
-// API URL設定（CORS Proxy対応版）
-let baseURL = '/api';
-let useProxy = false;
+// 最初のプロキシを使用
+const CORS_PROXY = CORS_PROXIES[0];
+
+// API URL設定
+let baseURL = process.env.NODE_ENV === 'production' 
+  ? 'https://prompthub-api.onrender.com/api'
+  : '/api';
+
+console.log('Original API URL:', baseURL);
 
 // 本番環境では常にプロキシを使用
+let finalBaseURL = baseURL;
 if (process.env.NODE_ENV === 'production') {
-  baseURL = 'https://prompthub-api.onrender.com/api';
-  useProxy = true;
-  console.log('Using proxy for API calls in production');
-}
-// 開発環境で環境変数があれば使用
-else if (process.env.REACT_APP_API_URL) {
-  baseURL = `${process.env.REACT_APP_API_URL}/api`;
-  console.log('Using API URL from env:', baseURL);
+  finalBaseURL = `${CORS_PROXY}${encodeURIComponent(baseURL)}`;
+  console.log('Using proxy for API calls:', finalBaseURL);
 }
 
-// プロキシ対応のURLを構築
-const finalBaseURL = useProxy ? `${CORS_PROXY}${encodeURIComponent(baseURL)}` : baseURL;
-console.log('Final API URL:', finalBaseURL);
-
+// axios実例を作成
 const api = axios.create({
   baseURL: finalBaseURL,
-  withCredentials: false, // クロスドメインでのCookie送信を無効化
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
-  }
+  },
+  // タイムアウト設定
+  timeout: 10000
 });
 
 // デバッグ情報
 console.log('API Client Configuration:', {
-  baseURL,
+  baseURL: finalBaseURL,
   withCredentials: false,
   productionMode: process.env.NODE_ENV === 'production'
 });
@@ -85,19 +89,49 @@ api.interceptors.response.use(
     
     // CORSエラーの場合の詳細情報
     if (error.message === 'Network Error') {
-      console.error('CORS Error detected. Check server configuration.');
+      console.error('CORS Error detected. Trying direct API access...');
       
-      // 修正案を表示
-      console.info('Try these solutions:', [
-        'Ensure backend CORS settings allow this origin',
-        'Check if backend server is running',
-        'Verify API endpoint URL is correct'
-      ]);
+      // プロキシを使用せずに直接リクエストを試みる
+      if (process.env.NODE_ENV === 'production') {
+        // このリクエストのみプロキシを使用しない
+        const originalRequest = error.config;
+        originalRequest.baseURL = baseURL;
+        
+        // プロキシなしでリトライ
+        console.log('Retrying without proxy:', originalRequest);
+        return axios(originalRequest);
+      }
     }
     
     return Promise.reject(error);
   }
 );
+
+// 単純化したAPIエラーハンドラー
+export const handleApiError = (error) => {
+  let errorMessage = 'エラーが発生しました。もう一度お試しください。';
+  
+  if (error.response) {
+    // サーバーからのレスポンスがある場合
+    const status = error.response.status;
+    
+    if (status === 400) {
+      errorMessage = error.response.data.message || '入力データが正しくありません。';
+    } else if (status === 401) {
+      errorMessage = 'ログインが必要です。';
+      // ログアウト処理
+      localStorage.removeItem('token');
+    } else if (status === 404) {
+      errorMessage = 'リソースが見つかりません。';
+    } else if (status === 500) {
+      errorMessage = 'サーバーエラーが発生しました。';
+    }
+  } else if (error.message === 'Network Error') {
+    errorMessage = 'ネットワークエラー。インターネット接続を確認してください。';
+  }
+  
+  return errorMessage;
+};
 
 // プロンプト関連のAPI
 export const promptService = {
