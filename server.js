@@ -45,6 +45,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
 }));
 
+// 静的ファイルへのアクセスをデバッグ
+app.use((req, res, next) => {
+  if (req.path.startsWith('/static/')) {
+    console.log('Static file request:', req.path);
+  }
+  next();
+});
+
 // シンプルなリクエストログと追加のデバッグ情報
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`);
@@ -368,13 +376,24 @@ if (process.env.NODE_ENV === 'production') {
       return res.status(404).send('API endpoint not found');
     }
     
+    // リクエスト情報を詳細にログに記録
+    console.log('Received client route request:', {
+      path: req.path,
+      originalUrl: req.originalUrl,
+      headers: req.headers,
+      query: req.query
+    });
+    
     // 複数の可能なindex.htmlの場所をチェック
     const possibleIndexPaths = [
       indexHtmlPath,
       path.join(__dirname, 'build/index.html'),
       path.join(__dirname, 'client/build/index.html'),
       path.join(process.cwd(), 'build/index.html'),
-      path.join(process.cwd(), 'client/build/index.html')
+      path.join(process.cwd(), 'client/build/index.html'),
+      // Render環境特有のパスも追加
+      '/opt/render/project/src/build/index.html',
+      '/opt/render/project/src/client/build/index.html'
     ];
     
     // 存在する最初のindex.htmlを提供

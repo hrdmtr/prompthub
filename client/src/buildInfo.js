@@ -10,7 +10,12 @@ const { execSync } = require('child_process');
 // 現在のGitコミットハッシュを取得
 let commitId = 'unknown';
 try {
-  commitId = execSync('git rev-parse --short HEAD').toString().trim();
+  // Renderなどの環境ではGitコマンドが使えない場合があるので環境変数も試す
+  if (process.env.RENDER_GIT_COMMIT) {
+    commitId = process.env.RENDER_GIT_COMMIT.substring(0, 7);
+  } else {
+    commitId = execSync('git rev-parse --short HEAD').toString().trim();
+  }
 } catch (error) {
   console.warn('Git commit idの取得に失敗しました:', error.message);
 }
@@ -28,13 +33,20 @@ Object.entries(buildInfo).forEach(([key, value]) => {
   process.env[key] = value;
 });
 
-// .env.localファイルに書き込む（次回のビルドでも使用可能に）
-const envContent = Object.entries(buildInfo)
-  .map(([key, value]) => `${key}=${value}`)
-  .join('\n');
+// 本番環境では.env.localファイルの書き込みをスキップ
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    // .env.localファイルに書き込む（次回のビルドでも使用可能に）
+    const envContent = Object.entries(buildInfo)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
 
-const envPath = path.resolve(__dirname, '../.env.local');
-fs.writeFileSync(envPath, envContent, 'utf8');
+    const envPath = path.resolve(__dirname, '../.env.local');
+    fs.writeFileSync(envPath, envContent, 'utf8');
+  } catch (error) {
+    console.warn('.env.localファイルの書き込みに失敗しました:', error.message);
+  }
+}
 
 console.log('ビルド情報を設定しました:');
 console.table(buildInfo);
