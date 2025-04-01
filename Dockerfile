@@ -15,7 +15,9 @@ RUN cd client && npm install
 COPY . .
 
 # フロントエンドをビルド
+WORKDIR /app/client
 RUN npm run build
+WORKDIR /app
 
 # 環境変数を設定
 ENV NODE_ENV=production

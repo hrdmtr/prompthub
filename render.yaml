@@ -1,7 +1,7 @@
 services:
-  # バックエンドAPI
+  # 単一のサービスとしてバックエンドとフロントエンドを統合
   - type: web
-    name: prompthub-api
+    name: prompthub
     env: docker
     region: singapore # 任意のリージョンを選択
     dockerfilePath: ./Dockerfile
@@ -15,28 +15,4 @@ services:
         sync: false # Renderダッシュボードで設定
       - key: JWT_SECRET
         sync: false # Renderダッシュボードで設定
-      - key: CLIENT_URL
-        fromService:
-          name: prompthub-web
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
-    autoDeploy: true
-
-  # フロントエンド
-  - type: web
-    name: prompthub-web
-    env: static
-    region: singapore # 任意のリージョンを選択
-    buildCommand: cd client && npm install && npm run build
-    staticPublishPath: ./client/build
-    envVars:
-      - key: REACT_APP_API_URL
-        fromService:
-          name: prompthub-api
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
     autoDeploy: true

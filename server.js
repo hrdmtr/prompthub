@@ -39,8 +39,8 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 
-// 本番環境ではReactアプリを提供（Renderでは分離デプロイするため、これはローカル環境用）
-if (process.env.NODE_ENV === 'production' && !process.env.RENDER) {
+// 本番環境ではReactアプリを提供
+if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client/build')));
   
   app.get('*', (req, res) => {

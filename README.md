@@ -72,6 +72,7 @@ PromptHubで共有されるプロンプトは、以下のようなさまざま�
 - **バックエンド**: Node.js, Express
 - **データベース**: MongoDB
 - **認証**: JWT
+- **デプロイ**: Docker, Render
 
 ### ローカル環境での実行方法
 
@@ -80,6 +81,10 @@ PromptHubで共有されるプロンプトは、以下のようなさまざま�
 git clone https://github.com/yourusername/prompthub.git
 cd prompthub
 
+# .envファイルの作成
+cp .env.example .env
+# .envファイルを編集して必要な環境変数を設定
+
 # 依存関係のインストール
 npm install
 cd client && npm install
@@ -87,6 +92,24 @@ cd client && npm install
 # 開発サーバーの起動
 npm run dev
 ```
+
+### Dockerを使った実行
+
+```bash
+# Dockerイメージのビルドと実行
+docker build -t prompthub .
+docker run -p 8080:8080 --env-file .env prompthub
+```
+
+### Renderへのデプロイ
+
+1. Renderアカウントを作成し、GitHubリポジトリと連携
+2. `render.yaml`を使用した構成をセットアップ:
+   - Renderダッシュボードで新規「Blueprint」を作成
+   - リポジトリとブランチを選択
+3. 環境変数の設定:
+   - `MONGODB_URI`: MongoDB接続文字列
+   - `JWT_SECRET`: JWTトークン用の秘密鍵
 
 詳細は[CLAUDE.md](CLAUDE.md)を参照してください。
 
