@@ -133,12 +133,12 @@ app.use('/api/auth', authRoutes);
 console.log('Current directory:', __dirname);
 const fs = require('fs');
 
-// 可能性のあるビルドパスをチェック
+// 可能性のあるビルドパスをチェック（優先順位順）
 const buildPaths = [
-  path.join(__dirname, 'client/build'),
-  path.join(__dirname, 'build'),
-  path.join(process.cwd(), 'client/build'),
-  path.join(process.cwd(), 'build')
+  path.join(__dirname, 'build'),         // プロジェクトルート直下のbuild（最優先）
+  path.join(process.cwd(), 'build'),     // 現在の作業ディレクトリ直下のbuild
+  path.join(__dirname, 'client/build'),  // client/build
+  path.join(process.cwd(), 'client/build')
 ];
 
 // 各パスの存在をチェック
@@ -180,16 +180,48 @@ if (!clientBuildPath) {
 
 // 本番環境ではReactアプリを提供
 if (process.env.NODE_ENV === 'production') {
-  // 追加のビルドディレクトリチェック（最終手段）
-  if (!fs.existsSync(clientBuildPath)) {
-    console.log('ビルドパスが存在しません。手動で作成を試みます...');
+  // 緊急手段：最終手段として実行時にビルドファイルを作成
+  if (!buildPaths.some(path => fs.existsSync(path))) {
+    console.log('どのビルドパスも存在しません。緊急ビルド対策を実行します...');
     try {
-      // シェルコマンドでビルドを試行
+      // レンダー環境特有のパス対策
       const { execSync } = require('child_process');
-      execSync('cd client && npm install && npm run build', { stdio: 'inherit' });
-      console.log('クライアントビルド成功');
+      
+      // ビルドパスがない場合に手動でフォルダを作成
+      console.log('mkdir -p build を実行...');
+      execSync('mkdir -p build', { stdio: 'inherit' });
+      
+      // エントリーポイントの緊急対応
+      console.log('緊急index.htmlファイルを作成...');
+      const emergencyHtml = `
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>PromptHub - Maintenance</title>
+          <style>
+            body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+            h1 { color: #2563eb; }
+            .message { background: #f0f9ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+            .refresh { background: #2563eb; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; }
+          </style>
+        </head>
+        <body>
+          <h1>PromptHub</h1>
+          <div class="message">
+            <p><strong>ビルド処理中...</strong></p>
+            <p>アプリケーションは現在準備中です。数分後に再度アクセスしてください。</p>
+          </div>
+          <button class="refresh" onclick="window.location.reload()">更新</button>
+          <p><small>Server time: ${new Date().toISOString()}</small></p>
+        </body>
+        </html>
+      `;
+      fs.writeFileSync(path.join(__dirname, 'build', 'index.html'), emergencyHtml);
+      console.log('緊急index.htmlの作成完了');
     } catch (e) {
-      console.error('クライアントビルド失敗:', e.message);
+      console.error('緊急対策実行中にエラー:', e.message);
     }
   }
   

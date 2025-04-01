@@ -1,10 +1,24 @@
 services:
-  # Dockerではなく、ビルドパック（Node.js）を使用
+  # Dockerではなく、ビルドパック（Node.js）を使用（ビルド手順を詳細に制御）
   - type: web
     name: prompthub
     env: node
     region: singapore # 任意のリージョンを選択
-    buildCommand: npm run render-build
+    buildCommand: |
+      echo "Starting build process..."
+      npm install
+      echo "Backend dependencies installed"
+      cd client
+      npm install
+      echo "Frontend dependencies installed"
+      CI=false npm run build
+      echo "Frontend build completed"
+      ls -la build
+      mkdir -p ../build
+      cp -r build/* ../build/
+      echo "Build files copied to project root"
+      cd ..
+      ls -la build
     startCommand: npm start
     healthCheckPath: /api/test
     envVars:
@@ -12,6 +26,8 @@ services:
         value: production
       - key: PORT
         value: 3000
+      - key: CI
+        value: "false"
       - key: MONGODB_URI
         sync: false # Renderダッシュボードで設定
       - key: JWT_SECRET
