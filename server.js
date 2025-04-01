@@ -161,12 +161,18 @@ app.use('/api/auth', authRoutes);
 console.log('Current directory:', __dirname);
 const fs = require('fs');
 
-// 可能性のあるビルドパスをチェック（優先順位順）
+// 可能性のあるビルドパスをチェック（優先順位順）- Render環境に合わせて調整
+console.log('Process working directory:', process.cwd());
+
 const buildPaths = [
-  path.join(__dirname, 'build'),         // プロジェクトルート直下のbuild（最優先）
-  path.join(process.cwd(), 'build'),     // 現在の作業ディレクトリ直下のbuild
-  path.join(__dirname, 'client/build'),  // client/build
-  path.join(process.cwd(), 'client/build')
+  path.join(__dirname, 'build'),                     // プロジェクトルート直下のbuild（最優先）
+  path.join(process.cwd(), 'build'),                 // 現在の作業ディレクトリ直下のbuild
+  path.join(__dirname, 'client/build'),              // client/build
+  path.join(process.cwd(), 'client/build'),          // 現在の作業ディレクトリ/client/build
+  '/app/build',                                      // Docker内の絶対パス
+  '/app/client/build',                               // Docker内の絶対パス（クライアント）
+  '/opt/render/project/src/build',                   // Render特有のパス
+  '/opt/render/project/src/client/build'             // Render特有のパス
 ];
 
 // 各パスの存在をチェック
