@@ -6,15 +6,31 @@ console.log('API URL Config:', {
   REACT_APP_API_URL: process.env.REACT_APP_API_URL
 });
 
-// 確実にCORS問題を解決するために複数のプロキシを用意
+// CORSプロキシの選択肢
 const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://cors-anywhere.herokuapp.com/',
-  'https://proxy.cors.sh/'
+  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
+  { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' },
+  { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' }
 ];
 
-// 最初のプロキシを使用
-const CORS_PROXY = CORS_PROXIES[0];
+// 有効なCORSプロキシを確実に使用するための戦略
+function getProxyUrl(baseUrl) {
+  // ローカルストレージから以前使用したプロキシのインデックスを取得
+  const savedProxyIndex = localStorage.getItem('cors_proxy_index');
+  let proxyIndex = savedProxyIndex ? parseInt(savedProxyIndex, 10) : 0;
+  
+  // インデックスが有効な範囲にあることを確認
+  if (isNaN(proxyIndex) || proxyIndex < 0 || proxyIndex >= CORS_PROXIES.length) {
+    proxyIndex = 0;
+  }
+  
+  // 選択されたプロキシを使用
+  const proxy = CORS_PROXIES[proxyIndex];
+  console.log(`Using CORS proxy: ${proxy.name} (${proxyIndex + 1}/${CORS_PROXIES.length})`);
+  
+  // プロキシを含む完全なURLを返す
+  return `${proxy.url}${encodeURIComponent(baseUrl)}`;
+}
 
 // API URL設定
 let baseURL = process.env.NODE_ENV === 'production' 
@@ -23,11 +39,17 @@ let baseURL = process.env.NODE_ENV === 'production'
 
 console.log('Original API URL:', baseURL);
 
-// 本番環境では常にプロキシを使用
+// プロキシの使用条件
+const forceProxy = true; // 開発段階では常にプロキシを使用する（troubelshooting用）
+const shouldUseProxy = process.env.NODE_ENV === 'production' || forceProxy;
+
+// 本番環境または強制設定時にプロキシを使用
 let finalBaseURL = baseURL;
-if (process.env.NODE_ENV === 'production') {
-  finalBaseURL = `${CORS_PROXY}${encodeURIComponent(baseURL)}`;
-  console.log('Using proxy for API calls:', finalBaseURL);
+if (shouldUseProxy) {
+  finalBaseURL = getProxyUrl(baseURL);
+  console.log(`CORS proxy enabled. Full API URL: ${finalBaseURL}`);
+} else {
+  console.log('Using direct API connection (no proxy)');
 }
 
 // axios実例を作成
@@ -77,29 +99,66 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     // 成功レスポンスの処理
-    console.log(`API Response from: ${response.config.url}`, {
+    console.log(`API Response Success from: ${response.config.url}`, {
       status: response.status,
-      data: response.data
+      dataPreview: typeof response.data === 'object' ? 'Object data received' : (response.data?.substring?.(0, 50) || response.data)
     });
     return response;
   },
-  (error) => {
-    // エラーレスポンスの処理
-    console.error('API Response Error:', error);
+  async (error) => {
+    console.error('API Response Error:', {
+      message: error.message,
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status
+    });
     
-    // CORSエラーの場合の詳細情報
-    if (error.message === 'Network Error') {
-      console.error('CORS Error detected. Trying direct API access...');
+    // CORS関連のエラー処理
+    if (error.message === 'Network Error' || 
+        (error.response && error.response.status === 0) ||
+        error.code === 'ERR_NETWORK') {
       
-      // プロキシを使用せずに直接リクエストを試みる
-      if (process.env.NODE_ENV === 'production') {
-        // このリクエストのみプロキシを使用しない
-        const originalRequest = error.config;
-        originalRequest.baseURL = baseURL;
+      console.error('CORS or Network Error detected. Trying alternative proxy...');
+      
+      // 現在のプロキシインデックスを取得
+      let currentProxyIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
+      
+      // 次のプロキシに切り替え
+      currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+      localStorage.setItem('cors_proxy_index', currentProxyIndex.toString());
+      
+      // 新しいプロキシでリクエストを再試行
+      const proxy = CORS_PROXIES[currentProxyIndex];
+      console.log(`Switching to next proxy: ${proxy.name} (${currentProxyIndex + 1}/${CORS_PROXIES.length})`);
+      
+      // 元のリクエストを取得
+      const originalRequest = error.config;
+      const originalUrl = originalRequest.url;
+      
+      // 新しいプロキシURLを構築（ベースURLではなく完全なURLに対して適用）
+      const fullOriginalUrl = baseURL + originalUrl.replace(/^\//, '');
+      originalRequest.url = originalUrl; // URLを元のパスに戻す
+      originalRequest.baseURL = proxy.url + encodeURIComponent(baseURL);
+      
+      console.log(`Retrying request with new proxy to: ${originalRequest.baseURL}${originalRequest.url}`);
+      
+      try {
+        return await axios(originalRequest);
+      } catch (retryError) {
+        console.error('Retry with alternative proxy also failed:', retryError.message);
         
-        // プロキシなしでリトライ
-        console.log('Retrying without proxy:', originalRequest);
-        return axios(originalRequest);
+        // すべてのプロキシが失敗した場合、直接接続を試みる
+        if (currentProxyIndex === CORS_PROXIES.length - 1) {
+          console.log('All proxies failed. Attempting direct connection...');
+          originalRequest.baseURL = baseURL;
+          try {
+            return await axios(originalRequest);
+          } catch (directError) {
+            console.error('Direct connection also failed:', directError.message);
+          }
+        }
+        
+        return Promise.reject(retryError);
       }
     }
     
