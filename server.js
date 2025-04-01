@@ -22,11 +22,39 @@ console.log('- JWT_SECRET:', process.env.JWT_SECRET ? '設定済み' : '未設�
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ミドルウェア
+// ミドルウェア - CORSを設定（Render環境用に強化）
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function(origin, callback) {
+    // ローカル開発時は任意のオリジンを許可
+    if (!origin || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
+    // 指定されたCLIENT_URLがある場合はそれを許可
+    const allowedOrigins = [
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      // Renderの潜在的なドメインを許可
+      'https://prompthub-client.onrender.com',
+      'https://prompthub-api.onrender.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
+// CORSデバッグ用ミドルウェア
+app.use((req, res, next) => {
+  console.log('Request received from:', req.headers.origin);
+  console.log('Request URL:', req.url);
+  console.log('CORS allowed origins:', process.env.CLIENT_URL || 'http://localhost:3000');
+  next();
+});
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 

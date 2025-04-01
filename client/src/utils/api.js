@@ -1,8 +1,28 @@
 import axios from 'axios';
 
 // APIクライアントの作成
+console.log('API URL Config:', {
+  NODE_ENV: process.env.NODE_ENV,
+  REACT_APP_API_URL: process.env.REACT_APP_API_URL
+});
+
+// API URL設定（Render対応強化版）
+let baseURL = '/api';
+
+// 本番環境でREACT_APP_API_URLがある場合は使用
+if (process.env.REACT_APP_API_URL) {
+  baseURL = `${process.env.REACT_APP_API_URL}/api`;
+  console.log('Using API URL from env:', baseURL);
+}
+// 明示的にRender環境用のフォールバック
+else if (process.env.NODE_ENV === 'production') {
+  baseURL = 'https://prompthub-api.onrender.com/api';
+  console.log('Using fallback Render API URL:', baseURL);
+}
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/api` : '/api',
+  baseURL,
+  withCredentials: true // CORS認証のためにクッキーを送信
 });
 
 // リクエストインターセプター

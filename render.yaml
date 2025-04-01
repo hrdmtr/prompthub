@@ -1,24 +1,11 @@
 services:
-  # Dockerではなく、ビルドパック（Node.js）を使用（ビルド手順を詳細に制御）
+  # 統合アプローチから、フロントエンドとバックエンドを分離
   - type: web
-    name: prompthub
+    name: prompthub-api
     env: node
-    region: singapore # 任意のリージョンを選択
-    buildCommand: |
-      echo "Starting build process..."
-      npm install
-      echo "Backend dependencies installed"
-      cd client
-      npm install
-      echo "Frontend dependencies installed"
-      CI=false npm run build
-      echo "Frontend build completed"
-      ls -la build
-      mkdir -p ../build
-      cp -r build/* ../build/
-      echo "Build files copied to project root"
-      cd ..
-      ls -la build
+    region: singapore
+    plan: free
+    buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/test
     envVars:
@@ -32,4 +19,25 @@ services:
         sync: false # Renderダッシュボードで設定
       - key: JWT_SECRET
         sync: false # Renderダッシュボードで設定
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: prompthub-client
+          envVarKey: RENDER_EXTERNAL_URL
     autoDeploy: true
+
+  # フロントエンド（静的サイト）
+  - type: static
+    name: prompthub-client
+    buildCommand: cd client && npm install && CI=false npm run build
+    staticPublishPath: ./client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: prompthub-api
+          envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
