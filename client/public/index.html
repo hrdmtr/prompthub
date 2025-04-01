@@ -10,9 +10,31 @@
       content="PromptHub - AIプロンプト共有ソーシャルアプリケーション"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" crossorigin="use-credentials" />
+    <!-- メタタグを追加して実際のルート指定 -->
+    <base href="/" />
     <title>PromptHub - AIプロンプト共有</title>
   </head>
   <body>
     <noscript>このアプリを実行するにはJavaScriptを有効にしてください。</noscript>
     <div id="root"></div>
+    <!-- デバッグ情報 - 本番環境ではコメントアウト可能 -->
+    <script>
+      // 静的アセット読み込みのデバッグ
+      window.onerror = function(msg, url, line, col, error) {
+        console.error('Global error:', { msg, url, line, col, error });
+        // エラー情報をDOM上に表示（デバッグ用）
+        const errorDiv = document.createElement('div');
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.bottom = '0';
+        errorDiv.style.left = '0';
+        errorDiv.style.right = '0';
+        errorDiv.style.background = 'rgba(255,0,0,0.8)';
+        errorDiv.style.color = 'white';
+        errorDiv.style.padding = '10px';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.innerHTML = `<strong>Load Error:</strong> ${msg}<br>At: ${url} (${line}:${col})`;
+        document.body.appendChild(errorDiv);
+        return false;
+      };
+    </script>

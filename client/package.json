@@ -18,7 +18,7 @@
     },
     "scripts": {
         "start": "react-scripts start",
-        "build": "node src/buildInfo.js && react-scripts build",
+        "build": "node src/buildInfo.js && cross-env PUBLIC_URL=. react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject",
         "version": "echo $npm_package_version"

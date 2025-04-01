@@ -361,11 +361,47 @@ if (process.env.NODE_ENV === 'production') {
     }
   }
   
+  // 明示的に静的ファイルのルートを設定
+  console.log('Setting up static file serving...');
+  
   // 複数の可能なディレクトリをチェック＆提供
   [clientBuildPath, path.join(__dirname, 'build')].forEach(buildPath => {
     if (fs.existsSync(buildPath)) {
       console.log('Serving static files from:', buildPath);
-      app.use(express.static(buildPath));
+      
+      // 静的ファイル配信の設定 - キャッシュ設定を追加
+      app.use(express.static(buildPath, {
+        maxAge: '1d', // キャッシュ有効期間
+        setHeaders: (res, filePath) => {
+          // JSとCSSファイルには適切なContent-Typeを設定
+          if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+          }
+        }
+      }));
+      
+      // 明示的に/static/jsへのルートを追加
+      app.use('/static/js', express.static(path.join(buildPath, 'static', 'js'), {
+        setHeaders: (res) => res.setHeader('Content-Type', 'application/javascript')
+      }));
+      
+      // 明示的に/static/cssへのルートを追加
+      app.use('/static/css', express.static(path.join(buildPath, 'static', 'css'), {
+        setHeaders: (res) => res.setHeader('Content-Type', 'text/css')
+      }));
+      
+      // 明示的にmanifest.jsonへのルートを追加
+      app.get('/manifest.json', (req, res) => {
+        const manifestPath = path.join(buildPath, 'manifest.json');
+        if (fs.existsSync(manifestPath)) {
+          res.setHeader('Content-Type', 'application/json');
+          res.sendFile(manifestPath);
+        } else {
+          res.status(404).send('Manifest not found');
+        }
+      });
     }
   });
   
