@@ -6,26 +6,36 @@ console.log('API URL Config:', {
   REACT_APP_API_URL: process.env.REACT_APP_API_URL
 });
 
-// API URL設定（Render対応強化版）
-let baseURL = '/api';
+// CORSエラーを回避するプロキシサービス
+const CORS_PROXY = 'https://corsproxy.io/?';
 
-// 本番環境でREACT_APP_API_URLがある場合は使用
-if (process.env.REACT_APP_API_URL) {
+// API URL設定（CORS Proxy対応版）
+let baseURL = '/api';
+let useProxy = false;
+
+// 本番環境では常にプロキシを使用
+if (process.env.NODE_ENV === 'production') {
+  baseURL = 'https://prompthub-api.onrender.com/api';
+  useProxy = true;
+  console.log('Using proxy for API calls in production');
+}
+// 開発環境で環境変数があれば使用
+else if (process.env.REACT_APP_API_URL) {
   baseURL = `${process.env.REACT_APP_API_URL}/api`;
   console.log('Using API URL from env:', baseURL);
 }
-// 明示的にRender環境用のフォールバック
-else if (process.env.NODE_ENV === 'production') {
-  baseURL = 'https://prompthub-api.onrender.com/api';
-  console.log('Using fallback Render API URL:', baseURL);
-}
+
+// プロキシ対応のURLを構築
+const finalBaseURL = useProxy ? `${CORS_PROXY}${encodeURIComponent(baseURL)}` : baseURL;
+console.log('Final API URL:', finalBaseURL);
 
 const api = axios.create({
-  baseURL,
-  withCredentials: false, // CORS認証を無効化して単純リクエストにする
+  baseURL: finalBaseURL,
+  withCredentials: false, // クロスドメインでのCookie送信を無効化
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
   }
 });
 
@@ -43,9 +53,48 @@ api.interceptors.request.use(
     if (token) {
       config.headers['x-auth-token'] = token;
     }
+    
+    // デバッグ情報
+    console.log(`API Request to: ${config.url}`, {
+      method: config.method,
+      headers: config.headers,
+      data: config.data
+    });
+    
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// レスポンスインターセプター
+api.interceptors.response.use(
+  (response) => {
+    // 成功レスポンスの処理
+    console.log(`API Response from: ${response.config.url}`, {
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    // エラーレスポンスの処理
+    console.error('API Response Error:', error);
+    
+    // CORSエラーの場合の詳細情報
+    if (error.message === 'Network Error') {
+      console.error('CORS Error detected. Check server configuration.');
+      
+      // 修正案を表示
+      console.info('Try these solutions:', [
+        'Ensure backend CORS settings allow this origin',
+        'Check if backend server is running',
+        'Verify API endpoint URL is correct'
+      ]);
+    }
+    
     return Promise.reject(error);
   }
 );
