@@ -2,6 +2,21 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
+// バージョン情報コンポーネント（小さく表示）
+const VersionBadge = () => {
+  // 現在のJSタイムスタンプ - リロードで変わるため、デプロイ検証に使用可能
+  const jsTimestamp = Math.floor((Date.now() % 10000000) / 10000); // 最後の6桁を3桁に短縮
+  
+  // CORSプロキシ情報
+  const proxyIndex = localStorage.getItem('cors_proxy_index') || '?';
+  
+  return (
+    <span className="text-xs opacity-50 ml-2" title="クリックでコピー">
+      [{jsTimestamp}.{proxyIndex}]
+    </span>
+  );
+};
+
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -15,6 +30,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="text-xl font-bold flex items-center">
           <span>🤖 PromptHub</span>
+          <VersionBadge />
         </Link>
         
         <div className="flex space-x-4 items-center">
