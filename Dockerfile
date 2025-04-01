@@ -1,34 +1,63 @@
-FROM node:18-alpine
+# マルチステージビルド - ビルドステージ
+FROM node:18-alpine AS builder
 
+# ワーキングディレクトリ設定
 WORKDIR /app
 
-# パッケージファイルをコピー
+# バックエンド依存関係のインストール
 COPY package*.json ./
-# バックエンド依存関係をインストール
 RUN npm install
 
-# クライアント依存関係をインストール
+# フロントエンド依存関係のインストール
 COPY client/package*.json ./client/
 RUN cd client && npm install
 
 # ソースコードをコピー
 COPY . .
 
-# フロントエンドをビルド
-WORKDIR /app/client
-RUN npm run build
+# フロントエンドのビルド（CI=falseで警告をエラーとして扱わない）
+RUN cd client && CI=false npm run build
+
+# ビルド結果の確認
+RUN ls -la client/build
+RUN echo "Build completed"
+
+# 実行ステージ - 最終的なイメージ
+FROM node:18-alpine
+
+# ワーキングディレクトリ設定
 WORKDIR /app
 
-# ビルド結果確認
-RUN ls -la /app/client/build
-RUN if [ ! -f /app/client/build/index.html ]; then echo "ERROR: index.html not found in build directory" && exit 1; fi
+# 本番用ライブラリのみインストール
+COPY package*.json ./
+RUN npm install --production
 
-# 環境変数を設定
+# バックエンドコードをコピー
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/routes ./routes
+COPY --from=builder /app/models ./models
+COPY --from=builder /app/middleware ./middleware
+
+# フロントエンドのビルド結果をコピー
+COPY --from=builder /app/client/build ./client/build
+# セカンダリビルドディレクトリにも配置（冗長化）
+RUN mkdir -p ./build
+COPY --from=builder /app/client/build ./build
+
+# ビルドディレクトリの確認
+RUN ls -la ./client/build
+RUN ls -la ./build
+
+# 環境変数の設定
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=3000
+ENV HOST=0.0.0.0
 
-# ポートを公開
-EXPOSE 8080
+# アプリを公開するポート
+EXPOSE 3000
 
-# アプリを起動
-CMD ["npm", "start"]
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget -qO- http://localhost:$PORT/api/test || exit 1
+
+# サーバー起動コマンド
+CMD ["node", "server.js"]

@@ -1,43 +1,20 @@
 services:
-  # 統合アプローチから、フロントエンドとバックエンドを分離
+  # Dockerを使用した統合デプロイ
   - type: web
-    name: prompthub-api
-    env: node
+    name: prompthub
+    env: docker
     region: singapore
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node server.js
     healthCheckPath: /api/test
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
-      - key: CI
-        value: "false"
       - key: MONGODB_URI
         sync: false # Renderダッシュボードで設定
       - key: JWT_SECRET
         sync: false # Renderダッシュボードで設定
-      - key: CLIENT_URL
-        fromService:
-          type: web
-          name: prompthub-client
-          envVarKey: RENDER_EXTERNAL_URL
     autoDeploy: true
-
-  # フロントエンド（静的サイト）
-  - type: static
-    name: prompthub-client
-    buildCommand: cd client && npm install && CI=false npm run build
-    staticPublishPath: ./client/build
-    envVars:
-      - key: REACT_APP_API_URL
-        fromService:
-          type: web
-          name: prompthub-api
-          envVarKey: RENDER_EXTERNAL_URL
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
