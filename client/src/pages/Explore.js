@@ -45,6 +45,7 @@ const Explore = () => {
             search: searchQuery || undefined,
             sort: filters.sort
           });
+          localStorage.setItem('using_direct_access', 'true');
           setPrompts(response.data);
           setError(null);
           console.log('標準APIコールが成功');
@@ -66,20 +67,40 @@ const Explore = () => {
         if (searchQuery) queryParams.append('search', searchQuery);
         queryParams.append('sort', filters.sort);
         
-        // 完全なURLを構築
-        const fullUrl = `${apiUrl}?${queryParams.toString()}`;
+        // 相対URLを構築
+        const relativeUrl = `${apiUrl}?${queryParams.toString()}`;
+        
+        // 完全なURLを構築（現在のドメインを使用）
+        const currentOrigin = window.location.origin;
+        const fullUrl = `${currentOrigin}${relativeUrl}`;
+        console.log('相対URL:', relativeUrl);
         console.log('完全なURL:', fullUrl);
         
         // プロキシURLを構築
         const proxyUrl = `${selectedProxy.url}${encodeURIComponent(fullUrl)}`;
         console.log('プロキシURL:', proxyUrl);
         
-        // 直接Axiosでリクエスト
-        const directResponse = await axios.get(proxyUrl);
-        console.log('プロキシ経由で成功:', directResponse);
-        
-        if (directResponse.data) {
+        // まず直接アクセスを試みる
+        try {
+          console.log('直接アクセスを試行:', relativeUrl);
+          const directResponse = await axios.get(relativeUrl);
+          console.log('直接アクセス成功:', directResponse);
+          localStorage.setItem('using_direct_access', 'true');
           setPrompts(directResponse.data);
+          setError(null);
+          return;
+        } catch (directError) {
+          console.warn('直接アクセスが失敗、プロキシにフォールバック:', directError.message);
+        }
+
+        // プロキシ経由でのアクセスを試みる
+        console.log('プロキシ経由でアクセス試行:', proxyUrl);
+        const proxyResponse = await axios.get(proxyUrl);
+        console.log('プロキシ経由で成功:', proxyResponse);
+        
+        if (proxyResponse.data) {
+          localStorage.setItem('using_direct_access', 'false');
+          setPrompts(proxyResponse.data);
           setError(null);
         } else {
           throw new Error('無効なレスポンスデータ');
@@ -123,7 +144,12 @@ const Explore = () => {
           ) : error ? (
             <span className="ml-1 text-red-500">エラー</span>
           ) : (
-            <span className="ml-1 text-green-500">成功 (プロキシ #{localStorage.getItem('cors_proxy_index') || '0'})</span>
+            <span className="ml-1 text-green-500">
+              成功 {localStorage.getItem('using_direct_access') === 'true' 
+                ? '(直接アクセス)' 
+                : `(プロキシ #${localStorage.getItem('cors_proxy_index') || '0'})`
+              }
+            </span>
           )}
         </div>
       </div>
