@@ -13,6 +13,7 @@ import CreatePrompt from './pages/CreatePrompt';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import Version from './pages/Version';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/create" element={<CreatePrompt />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/version" element={<Version />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

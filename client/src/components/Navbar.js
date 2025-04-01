@@ -38,6 +38,10 @@ const Navbar = () => {
             探索
           </Link>
           
+          <Link to="/version" className="hover:text-blue-200" title="デプロイ確認・バージョン情報">
+            Version
+          </Link>
+          
           {isAuthenticated ? (
             <>
               <Link to="/create" className="hover:text-blue-200">

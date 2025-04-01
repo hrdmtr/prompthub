@@ -207,6 +207,45 @@ app.all('/api/cors-test', (req, res) => {
   });
 });
 
+// バージョン情報取得エンドポイント
+app.get('/version', (req, res) => {
+  // すべてのCORSオリジンを許可
+  res.header('Access-Control-Allow-Origin', '*');
+  
+  // Gitのコミット情報を取得（可能な場合）
+  let commitInfo = 'unknown';
+  try {
+    const { execSync } = require('child_process');
+    commitInfo = execSync('git rev-parse HEAD').toString().trim();
+  } catch (error) {
+    console.log('Git情報の取得に失敗:', error.message);
+  }
+  
+  // バージョン情報を返す
+  res.json({
+    status: 'ok',
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    server: {
+      uptime: process.uptime(),
+      timestamp: Date.now(),
+      date: new Date().toISOString(),
+      commit: commitInfo
+    },
+    nodejs: {
+      version: process.version,
+      platform: process.platform,
+      memory: process.memoryUsage()
+    },
+    message: 'PromptHub API Version Information',
+    features: {
+      cors: true,
+      authentication: true,
+      proxies: true
+    }
+  });
+});
+
 // APIルートの設定
 app.use('/api/prompts', promptRoutes);
 app.use('/api/users', userRoutes);
