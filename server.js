@@ -22,58 +22,30 @@ console.log('- JWT_SECRET:', process.env.JWT_SECRET ? '設定済み' : '未設�
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ミドルウェア - CORSを設定（Render環境用に強化）
+// ミドルウェア - CORSを設定（すべてのオリジンを許可する緊急対応）
 app.use(cors({
-  origin: function(origin, callback) {
-    console.log('CORS Request from origin:', origin);
-    
-    // ローカル開発時は任意のオリジンを許可
-    if (!origin || process.env.NODE_ENV !== 'production') {
-      console.log('Allowing request in development mode or null origin');
-      return callback(null, true);
-    }
-    
-    // 指定されたCLIENT_URLがある場合はそれを許可
-    const allowedOrigins = [
-      process.env.CLIENT_URL || 'http://localhost:3000',
-      // Renderの潜在的なドメインを許可
-      'https://prompthub-client.onrender.com',
-      'https://prompthub-api.onrender.com',
-      'https://prompthub-gsxd.onrender.com',
-      'https://prompthub.onrender.com'
-    ];
-    
-    // Render環境では全てのRenderドメインを許可
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
-      console.log('Origin explicitly allowed:', origin);
-      callback(null, true);
-    } else {
-      console.log('CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*', // すべてのオリジンからのリクエストを許可（緊急対応）
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
 }));
 
-// CORSデバッグ用ミドルウェア
+// CORSデバッグとすべてのリクエストに対するCORSヘッダー追加
 app.use((req, res, next) => {
   console.log('Request received from:', req.headers.origin);
   console.log('Request URL:', req.url);
   console.log('Request method:', req.method);
-  console.log('CORS allowed origins:', process.env.CLIENT_URL || 'http://localhost:3000');
   
-  // CORS ヘッダーを明示的に設定
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  // すべてのリクエストに対してCORSヘッダーを設定（緊急対応）
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  res.header('Access-Control-Max-Age', '86400'); // プリフライトリクエストのキャッシュ（24時間）
   
-  // OPTIONS リクエスト（preflight リクエスト）の処理
+  // OPTIONS リクエスト（preflight リクエスト）の即時レスポンス
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
-    return res.status(200).end();
+    console.log('Immediately responding to OPTIONS request');
+    return res.status(204).send();
   }
   
   next();
@@ -172,7 +144,31 @@ connectWithRetry();
 
 // テスト用の基本APIエンドポイント
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working!' });
+  // CORS関連のデバッグ情報を返す
+  res.json({ 
+    message: 'API is working!',
+    cors: {
+      origin: req.headers.origin || 'unknown',
+      method: req.method,
+      'access-control-allow-origin': res.getHeader('Access-Control-Allow-Origin'),
+      'content-type': res.getHeader('Content-Type'),
+      headers: req.headers
+    }
+  });
+});
+
+// CORS専用テストエンドポイント
+app.get('/api/cors-test', (req, res) => {
+  // 明示的なCORSヘッダーを設定
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  
+  // テスト結果を返す
+  res.json({ 
+    success: true, 
+    message: 'CORS is working properly',
+    requestOrigin: req.headers.origin || 'not provided'
+  });
 });
 
 // APIルートの設定
