@@ -242,7 +242,10 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// サーバー起動
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// サーバー起動 - Render用にホストを設定
+const HOST = process.env.HOST || '0.0.0.0';  // Renderでは0.0.0.0を使用（すべてのインターフェイスにバインド）
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT}`);
+  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`RENDER: ${process.env.RENDER ? 'true' : 'false'}`);
 });

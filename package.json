@@ -15,7 +15,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "cd client && npm install && npm run build",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install && npm run build",
-    "render-build": "npm install && cd client && npm install && npm run build && ls -la client/build && cp -r client/build ."
+    "render-build": "npm install && cd client && npm install && npm run build && ls -la client/build && cp -r client/build . && echo 'Build completed. PORT will be: '$PORT"
   },
   "keywords": [],
   "author": "",
