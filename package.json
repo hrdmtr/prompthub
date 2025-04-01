@@ -15,7 +15,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "cd client && npm install && npm run build",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install && npm run build",
-    "render-build": "npm install && cd client && npm install && CI=false npm run build && mkdir -p ../build && cp -r build/* ../build/ && ls -la ../build && echo 'Build completed and copied to root/build. PORT will be: '$PORT"
+    "render-build": "npm install && cd client && npm install && CI=false PUBLIC_URL=/ npm run build && mkdir -p ../build && cp -r build/* ../build/ && cp build/index.html ../build/index.html && ls -la ../build && echo 'Build completed and copied to root/build. PORT will be: '$PORT"
   },
   "keywords": [],
   "author": "",

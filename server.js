@@ -405,11 +405,78 @@ if (process.env.NODE_ENV === 'production') {
     }
   });
   
+  // 特定の静的ファイルへの明示的なルーティング
+  app.get('/manifest.json', (req, res) => {
+    console.log('Manifest.json requested');
+    
+    // 可能性のある場所をチェック
+    const possiblePaths = [
+      path.join(__dirname, 'build/manifest.json'),
+      path.join(__dirname, 'client/build/manifest.json'),
+      path.join(process.cwd(), 'build/manifest.json'),
+      path.join(process.cwd(), 'client/build/manifest.json'),
+      '/opt/render/project/src/build/manifest.json'
+    ];
+    
+    for (const manifestPath of possiblePaths) {
+      if (fs.existsSync(manifestPath)) {
+        console.log('Sending manifest.json from:', manifestPath);
+        return res.sendFile(manifestPath);
+      }
+    }
+    
+    console.log('manifest.json not found in any of the expected locations');
+    return res.status(404).send('Manifest not found');
+  });
+  
+  // メインJSファイルの明示的なルーティング
+  app.get('/static/js/main.*.js', (req, res) => {
+    console.log('Main JS requested:', req.path);
+    
+    // 実際のファイル名からファイル名パターンを抽出
+    const filename = path.basename(req.path);
+    
+    // 可能性のある場所をチェック
+    const possibleDirs = [
+      path.join(__dirname, 'build/static/js'),
+      path.join(__dirname, 'client/build/static/js'),
+      path.join(process.cwd(), 'build/static/js'),
+      path.join(process.cwd(), 'client/build/static/js'),
+      '/opt/render/project/src/build/static/js'
+    ];
+    
+    for (const dir of possibleDirs) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir);
+        const mainJsFile = files.find(file => file.startsWith('main.') && file.endsWith('.js'));
+        
+        if (mainJsFile) {
+          const fullPath = path.join(dir, mainJsFile);
+          console.log('Sending main JS from:', fullPath);
+          res.setHeader('Content-Type', 'application/javascript');
+          return res.sendFile(fullPath);
+        }
+      }
+    }
+    
+    console.log('Main JS file not found in any of the expected locations');
+    return res.status(404).send('Main JS file not found');
+  });
+  
   // すべてのルートをindexにリダイレクト
   app.get('*', (req, res) => {
     // APIリクエストは無視（404を返すようにする）
     if (req.path.startsWith('/api/')) {
       return res.status(404).send('API endpoint not found');
+    }
+    
+    // 静的ファイルへのリクエストを詳細にログ
+    if (req.path.includes('.')) {
+      console.log('Static file requested:', {
+        path: req.path,
+        originalUrl: req.originalUrl,
+        extension: path.extname(req.path)
+      });
     }
     
     // リクエスト情報を詳細にログに記録
