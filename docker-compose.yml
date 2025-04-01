@@ -17,7 +17,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: prompthub-api
+    container_name: prompthub-server
     restart: always
     ports:
       - "5001:8080"

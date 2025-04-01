@@ -29,7 +29,7 @@ PromptHubのリポジトリを選択します。
 ```yaml
 services:
   - type: web
-    name: prompthub-api
+    name: prompthub-server
     env: node  # dockerからnodeに変更
     buildCommand: npm install
     startCommand: npm start
@@ -43,7 +43,7 @@ Dockerfileを使用する主なメリット：
 
 ### 4. 環境変数の設定
 
-`prompthub-api` サービスに以下の環境変数を設定します：
+`prompthub-server` サービスに以下の環境変数を設定します：
 
 - `MONGODB_URI`: MongoDB Atlasの接続文字列
 - `JWT_SECRET`: JWTトークンの署名に使用する秘密鍵（安全な長い文字列）
@@ -67,7 +67,7 @@ mongodb+srv://<username>:<password>@cluster0.mongodb.net/prompthub?retryWrites=t
 
 ## ウェブサービスについて
 
-- **バックエンド**: `prompthub-api` - ExpressサーバーAPI
+- **バックエンド**: `prompthub-server` - ExpressサーバーAPI
 - **フロントエンド**: `prompthub-web` - Reactフロントエンド
 
 ## 注意点
