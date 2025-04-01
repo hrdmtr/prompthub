@@ -2,11 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { promptService, userService, authService } from '../utils/api';
 import useAuth from '../hooks/useAuth';
+import { 
+  TwitterShareButton, 
+  LineShareButton, 
+  FacebookShareButton,
+  formatShareContent 
+} from '../components/ShareButtons';
 
 const PromptDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  
+  // 現在のURL（共有用）
+  const currentUrl = window.location.href;
   
   const [commentInput, setCommentInput] = useState('');
   const [prompt, setPrompt] = useState(null);
@@ -267,6 +276,57 @@ const PromptDetail = () => {
           
           <div className="bg-gray-50 p-4 rounded-lg mb-6 whitespace-pre-wrap font-mono text-sm">
             {prompt.content}
+          </div>
+          
+          {/* SNS共有ボタン */}
+          <div className="bg-gray-100 p-4 rounded-lg mb-6">
+            <h3 className="text-sm font-medium mb-3 text-gray-700">このプロンプトをシェアする</h3>
+            <div className="flex flex-wrap gap-2">
+              {/* シェア内容のフォーマット */}
+              {(() => {
+                const { url, title, quote, hashtags } = formatShareContent(prompt, currentUrl);
+                return (
+                  <>
+                    <TwitterShareButton url={url} title={title} hashtags={hashtags}>
+                      <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                      </svg>
+                      <span>ポスト</span>
+                    </TwitterShareButton>
+                    
+                    <LineShareButton url={url} title={title}>
+                      <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 448 512">
+                        <path d="M272.1 204.2v71.1c0 1.8-1.4 3.2-3.2 3.2h-11.4c-1.1 0-2.1-.6-2.6-1.3l-32.6-44v42.2c0 1.8-1.4 3.2-3.2 3.2h-11.4c-1.8 0-3.2-1.4-3.2-3.2v-71.1c0-1.8 1.4-3.2 3.2-3.2H219c1 0 2.1.5 2.6 1.4l32.6 44v-42.2c0-1.8 1.4-3.2 3.2-3.2h11.4c1.8-.1 3.3 1.4 3.3 3.1zm-82-3.2h-11.4c-1.8 0-3.2 1.4-3.2 3.2v71.1c0 1.8 1.4 3.2 3.2 3.2h11.4c1.8 0 3.2-1.4 3.2-3.2v-71.1c0-1.7-1.4-3.2-3.2-3.2zm-27.5 59.6h-31.1v-56.4c0-1.8-1.4-3.2-3.2-3.2h-11.4c-1.8 0-3.2 1.4-3.2 3.2v71.1c0 .9.3 1.6.9 2.2.6.5 1.3.9 2.2.9h45.7c1.8 0 3.2-1.4 3.2-3.2v-11.4c0-1.7-1.4-3.2-3.1-3.2zM332.1 201h-45.7c-1.7 0-3.2 1.4-3.2 3.2v71.1c0 1.7 1.4 3.2 3.2 3.2h45.7c1.8 0 3.2-1.4 3.2-3.2v-11.4c0-1.8-1.4-3.2-3.2-3.2H301v-12h31.1c1.8 0 3.2-1.4 3.2-3.2V234c0-1.8-1.4-3.2-3.2-3.2H301v-12h31.1c1.8 0 3.2-1.4 3.2-3.2v-11.4c-.1-1.7-1.5-3.2-3.2-3.2zM448 113.7V399c-.1 44.8-36.8 81.1-81.7 81H81c-44.8-.1-81.1-36.9-81-81.7V113c.1-44.8 36.9-81.1 81.7-81H367c44.8.1 81.1 36.8 81 81.7zm-61.6 122.6c0-73-73.2-132.4-163.1-132.4-89.9 0-163.1 59.4-163.1 132.4 0 65.4 58 120.2 136.4 130.6 19.1 4.1 16.9 11.1 12.6 36.8-.7 4.1-3.3 16.1 14.1 8.8 17.4-7.3 93.9-55.3 128.2-94.7 23.6-26 34.9-52.3 34.9-81.5z"/>
+                      </svg>
+                      <span>LINE</span>
+                    </LineShareButton>
+                    
+                    <FacebookShareButton url={url} quote={quote}>
+                      <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 320 512">
+                        <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/>
+                      </svg>
+                      <span>シェア</span>
+                    </FacebookShareButton>
+                    
+                    {/* コピーボタン */}
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentUrl);
+                        alert('URLをクリップボードにコピーしました');
+                      }}
+                      className="flex items-center justify-center p-2 bg-gray-700 hover:bg-gray-800 text-white rounded-md transition-colors"
+                      aria-label="URLをコピー"
+                    >
+                      <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                      </svg>
+                      <span>URLをコピー</span>
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
           </div>
           
           <div className="flex justify-between mb-6">
