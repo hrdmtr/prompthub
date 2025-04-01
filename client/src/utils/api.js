@@ -90,12 +90,24 @@ api.interceptors.request.use(
       config.headers['x-auth-token'] = token;
     }
     
-    // デバッグ情報
-    console.log(`API Request to: ${config.url}`, {
-      method: config.method,
-      headers: config.headers,
-      data: config.data
-    });
+    // 詳細なデバッグ情報
+    const fullUrl = config.baseURL ? 
+      (config.baseURL.endsWith('/') && config.url.startsWith('/') ? 
+        config.baseURL.slice(0, -1) + config.url : 
+        config.baseURL + config.url) : 
+      config.url;
+    
+    // スタックトレースを取得して呼び出し元を特定
+    const stackTrace = new Error().stack;
+    
+    console.log('%c【APIリクエストの詳細情報】', 'color: blue; font-weight: bold;');
+    console.log(`🔴 完全なURL: ${fullUrl}`);
+    console.log(`🔵 ベースURL: ${config.baseURL || '(なし)'}`);
+    console.log(`🟡 パスURL: ${config.url}`);
+    console.log(`📋 メソッド: ${config.method}`);
+    console.log(`🔍 リクエスト元: ${stackTrace}`);
+    console.log('📦 リクエストデータ:', config.data || '(なし)');
+    console.log('🔑 ヘッダー:', config.headers);
     
     return config;
   },
@@ -108,20 +120,45 @@ api.interceptors.request.use(
 // レスポンスインターセプター
 api.interceptors.response.use(
   (response) => {
-    // 成功レスポンスの処理
-    console.log(`API Response Success from: ${response.config.url}`, {
-      status: response.status,
-      dataPreview: typeof response.data === 'object' ? 'Object data received' : (response.data?.substring?.(0, 50) || response.data)
-    });
+    // 成功レスポンスの詳細情報
+    const fullUrl = response.config.baseURL ? 
+      (response.config.baseURL.endsWith('/') && response.config.url.startsWith('/') ? 
+        response.config.baseURL.slice(0, -1) + response.config.url : 
+        response.config.baseURL + response.config.url) : 
+      response.config.url;
+    
+    console.log('%c【APIレスポンスの詳細情報】', 'color: green; font-weight: bold;');
+    console.log(`✅ リクエスト成功: ${fullUrl}`);
+    console.log(`📊 ステータス: ${response.status}`);
+    console.log(`🕒 処理時間: ${response.headers['x-response-time'] || 'N/A'}`);
+    console.log('📦 レスポンスデータ:', response.data);
     return response;
   },
   async (error) => {
-    console.error('API Response Error:', {
-      message: error.message,
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status
-    });
+    // エラーレスポンスの詳細情報
+    let fullUrl = '不明';
+    if (error.config) {
+      fullUrl = error.config.baseURL ? 
+        (error.config.baseURL.endsWith('/') && error.config.url.startsWith('/') ? 
+          error.config.baseURL.slice(0, -1) + error.config.url : 
+          error.config.baseURL + error.config.url) : 
+        error.config.url;
+    }
+    
+    console.log('%c【APIエラーの詳細情報】', 'color: red; font-weight: bold;');
+    console.log(`❌ リクエスト失敗: ${fullUrl}`);
+    console.log(`⚠️ エラーメッセージ: ${error.message}`);
+    console.log(`🔢 エラーコード: ${error.code || 'なし'}`);
+    console.log(`📋 メソッド: ${error.config?.method || '不明'}`);
+    console.log(`📊 ステータス: ${error.response?.status || '不明'}`);
+    
+    if (error.response) {
+      console.log('📦 エラーレスポンス:', error.response.data);
+    }
+    
+    // スタックトレースを取得して呼び出し元を特定
+    const stackTrace = new Error().stack;
+    console.log(`🔍 エラー発生場所: ${stackTrace}`);
     
     // CORS関連のエラー処理
     if (error.message === 'Network Error' || 
