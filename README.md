@@ -113,6 +113,24 @@ docker run -p 8080:8080 --env-file .env prompthub
 
 **注意**: Renderデプロイには Node.js ビルドパックを使用しています。Dockerfileはローカル開発とテスト用です。
 
+### MongoDB Atlasの設定
+
+MongoDB Atlasを使用する場合は、次の手順でRenderからの接続を許可する必要があります：
+
+1. [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)にログイン
+2. 使用するプロジェクトを選択
+3. 左サイドメニューから「Network Access」をクリック
+4. 「+ ADD IP ADDRESS」ボタンをクリック
+5. 以下のいずれかを設定:
+   - Renderのアウトバウンド固定IPを入力（Renderの管理画面で確認）
+   - 開発中は `0.0.0.0/0` （任意のIP）を許可（**注**: 本番環境ではセキュリティのため範囲を制限することを推奨）
+6. 「Confirm」をクリックして保存
+
+接続文字列は以下の形式になります：
+```
+mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/<database-name>?retryWrites=true&w=majority
+```
+
 詳細は[CLAUDE.md](CLAUDE.md)を参照してください。
 
 ## 🤝 貢献

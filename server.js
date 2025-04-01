@@ -23,11 +23,31 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB接続
+// MongoDB接続（リトライロジック付き）
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prompthub';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+console.log('Attempting to connect to MongoDB at:', MONGODB_URI.replace(/mongodb\+srv:\/\/([^:]+):([^@]+)@/, 'mongodb+srv://****:****@'));
+
+// リトライロジックの設定
+const connectWithRetry = () => {
+  console.log('MongoDB接続を試行中...');
+  mongoose.connect(MONGODB_URI, {
+    // 接続設定（タイムアウトなど）
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+  })
+    .then(() => {
+      console.log('MongoDB connected successfully');
+    })
+    .catch(err => {
+      console.error('MongoDB connection error:', err);
+      console.log('5秒後に再接続を試みます...');
+      // 5秒後に再接続
+      setTimeout(connectWithRetry, 5000);
+    });
+};
+
+// 接続開始
+connectWithRetry();
 
 // テスト用の基本APIエンドポイント
 app.get('/api/test', (req, res) => {
