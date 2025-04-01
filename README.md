@@ -73,6 +73,7 @@ PromptHubで共有されるプロンプトは、以下のようなさまざま�
 - **データベース**: MongoDB
 - **認証**: JWT
 - **デプロイ**: Docker, Render
+- **コード品質**: ESLint, Prettier
 
 ### ローカル環境での実行方法
 
@@ -91,6 +92,49 @@ cd client && npm install
 
 # 開発サーバーの起動
 npm run dev
+```
+
+### リンターとフォーマッターの使用方法
+
+コード品質を維持するため、ESLintとPrettierを導入しています。以下のコマンドで使用できます：
+
+#### サーバー側（ルートディレクトリ）
+
+```bash
+# コードのリント（構文チェック）
+npm run lint
+
+# リント問題の自動修正
+npm run lint:fix
+
+# コードの自動フォーマット
+npm run format
+```
+
+#### クライアント側（clientディレクトリ）
+
+```bash
+# clientディレクトリに移動
+cd client
+
+# コードのリント（構文チェック）
+npm run lint
+
+# リント問題の自動修正
+npm run lint:fix
+
+# コードの自動フォーマット
+npm run format
+```
+
+#### 一括実行（プロジェクト全体）
+
+```bash
+# プロジェクト全体のリント
+npm run lint:all
+
+# プロジェクト全体のフォーマット
+npm run format:all
 ```
 
 ### Dockerを使った実行
