@@ -15,7 +15,14 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "cd client && npm install && npm run build",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install && npm run build",
-    "render-build": "npm install && cd client && npm install && CI=false PUBLIC_URL=/ npm run build && mkdir -p ../build && cp -r build/* ../build/ && cp build/index.html ../build/index.html && ls -la ../build && echo 'Build completed and copied to root/build. PORT will be: '$PORT"
+    "render-build": "npm install && cd client && npm install && CI=false PUBLIC_URL=/ npm run build && mkdir -p ../build && cp -r build/* ../build/ && cp build/index.html ../build/index.html && ls -la ../build && echo 'Build completed and copied to root/build. PORT will be: '$PORT",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "lint:client": "cd client && npm run lint",
+    "format:client": "cd client && npm run format",
+    "lint:all": "npm run lint && npm run lint:client",
+    "format:all": "npm run format && npm run format:client"
   },
   "keywords": [],
   "author": "",
@@ -37,8 +44,13 @@
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-node": "^11.1.0",
     "nodemon": "^3.1.9",
     "postcss": "^8.5.3",
+    "prettier": "^3.5.3",
     "tailwindcss": "^4.0.17"
   }
 }
