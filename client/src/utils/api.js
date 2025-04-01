@@ -35,9 +35,9 @@ function getProxyUrl(baseUrl) {
 }
 
 // API URL設定
-let baseURL = process.env.NODE_ENV === 'production' 
-  ? 'https://prompthub-api.onrender.com/api'
-  : '/api';
+// 同じドメインの相対パスを使用する
+// すべてのリクエストを https://prompthub-gsxd.onrender.com/api/* に送信
+let baseURL = '/api';
 
 console.log('Original API URL:', baseURL);
 

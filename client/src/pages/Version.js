@@ -52,14 +52,9 @@ const Version = () => {
         // 1秒程度の遅延を入れて、クライアント情報とサーバー情報の取得時間に差をつける
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // API URLは、ローカル開発環境と本番環境で異なる可能性がある
-        // 本番環境のフロントエンドのオリジンを確認
-        const isProduction = window.location.origin.includes('prompthub-gsxd.onrender.com');
-        
-        // Render環境のAPI URLを使用
-        const apiUrl = isProduction 
-          ? 'https://prompthub-api.onrender.com/version'
-          : `${window.location.origin}/version`;
+        // 同じドメインの相対パスを使用
+        // フロントエンドとバックエンドが同じドメインで動作している場合
+        const apiUrl = '/version';
         
         // CORSプロキシを使用するバックアップURL
         let corsProxyIndex = localStorage.getItem('cors_proxy_index') || '0';
@@ -74,7 +69,10 @@ const Version = () => {
         
         // 選択されたプロキシを使用
         const proxy = CORS_PROXIES[corsProxyIndex % CORS_PROXIES.length];
-        const backupUrl = `${proxy.url}${encodeURIComponent('https://prompthub-api.onrender.com/version')}`;
+        // 完全なURLを構築（クライアントサイドでのCORSプロキシ用）
+        // 相対パスではなく、完全なURLが必要
+        const fullVersionUrl = `${window.location.origin}/version`;
+        const backupUrl = `${proxy.url}${encodeURIComponent(fullVersionUrl)}`;
         
         console.log(`Trying to fetch version info from: ${apiUrl}`);
         console.log(`Backup URL with CORS proxy (${proxy.name}): ${backupUrl}`);

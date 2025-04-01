@@ -56,7 +56,8 @@ const Explore = () => {
         
         // ダイレクトプロキシを使用（バックアップアプローチ）
         console.log(`CORSプロキシを使用: ${selectedProxy.name}`);
-        const apiUrl = 'https://prompthub-api.onrender.com/api/prompts';
+        // 同じドメインの相対パスを使用
+        const apiUrl = '/api/prompts';
         
         // クエリパラメータを構築
         const queryParams = new URLSearchParams();
