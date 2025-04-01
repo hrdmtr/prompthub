@@ -3,12 +3,8 @@ import { Link } from 'react-router-dom';
 import { promptService } from '../utils/api';
 import axios from 'axios';
 
-// CORSプロキシのリスト（コンポーネント外に定義して、ESLintエラーを回避）
-const CORS_PROXIES = [
-  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
-  { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' },
-  { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' }
-];
+// CORSプロキシは不要になりました - 直接APIアクセスを使用
+const CORS_PROXIES = [];
 
 const Explore = () => {
   // フィルター状態
@@ -32,89 +28,22 @@ const Explore = () => {
       try {
         setLoading(true);
         
-        // CORS_PROXIESはコンポーネント外で定義されています
+        // シンプルな直接アクセスのみを使用 - CORSプロキシは不要
+        console.log('APIで試行...');
         
-        // プロキシインデックスの取得
-        const proxyIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10) % CORS_PROXIES.length;
-        const selectedProxy = CORS_PROXIES[proxyIndex];
+        const response = await promptService.getPrompts({
+          category: filters.category !== 'all' ? filters.category : undefined,
+          purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
+          search: searchQuery || undefined,
+          sort: filters.sort
+        });
         
-        // 通常の方法でまず試す
-        try {
-          console.log('通常のAPIで試行...');
-          const response = await promptService.getPrompts({
-            category: filters.category !== 'all' ? filters.category : undefined,
-            purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
-            search: searchQuery || undefined,
-            sort: filters.sort
-          });
-          localStorage.setItem('using_direct_access', 'true');
-          setPrompts(response.data);
-          setError(null);
-          console.log('標準APIコールが成功');
-          return; // 成功したら終了
-        } catch (standardError) {
-          console.warn('標準APIコールが失敗:', standardError.message);
-          // 失敗したら直接CORSプロキシを使用
-        }
-        
-        // ダイレクトプロキシを使用（バックアップアプローチ）
-        console.log(`CORSプロキシを使用: ${selectedProxy.name}`);
-        // 同じドメインの相対パスを使用
-        const apiUrl = '/api/prompts';
-        
-        // クエリパラメータを構築
-        const queryParams = new URLSearchParams();
-        if (filters.category !== 'all') queryParams.append('category', filters.category);
-        if (filters.purpose !== 'all') queryParams.append('purpose', filters.purpose);
-        if (searchQuery) queryParams.append('search', searchQuery);
-        queryParams.append('sort', filters.sort);
-        
-        // 相対URLを構築
-        const relativeUrl = `${apiUrl}?${queryParams.toString()}`;
-        
-        // 完全なURLを構築（現在のドメインを使用）
-        const currentOrigin = window.location.origin;
-        const fullUrl = `${currentOrigin}${relativeUrl}`;
-        console.log('相対URL:', relativeUrl);
-        console.log('完全なURL:', fullUrl);
-        
-        // プロキシURLを構築
-        const proxyUrl = `${selectedProxy.url}${encodeURIComponent(fullUrl)}`;
-        console.log('プロキシURL:', proxyUrl);
-        
-        // まず直接アクセスを試みる
-        try {
-          console.log('直接アクセスを試行:', relativeUrl);
-          const directResponse = await axios.get(relativeUrl);
-          console.log('直接アクセス成功:', directResponse);
-          localStorage.setItem('using_direct_access', 'true');
-          setPrompts(directResponse.data);
-          setError(null);
-          return;
-        } catch (directError) {
-          console.warn('直接アクセスが失敗、プロキシにフォールバック:', directError.message);
-        }
-
-        // プロキシ経由でのアクセスを試みる
-        console.log('プロキシ経由でアクセス試行:', proxyUrl);
-        const proxyResponse = await axios.get(proxyUrl);
-        console.log('プロキシ経由で成功:', proxyResponse);
-        
-        if (proxyResponse.data) {
-          localStorage.setItem('using_direct_access', 'false');
-          setPrompts(proxyResponse.data);
-          setError(null);
-        } else {
-          throw new Error('無効なレスポンスデータ');
-        }
+        localStorage.setItem('using_direct_access', 'true');
+        setPrompts(response.data);
+        setError(null);
+        console.log('APIコールが成功');
       } catch (err) {
         console.error('プロンプト取得エラー:', err);
-        
-        // プロキシインデックスを変更
-        const currentIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
-        const nextIndex = (currentIndex + 1) % CORS_PROXIES.length;
-        localStorage.setItem('cors_proxy_index', nextIndex.toString());
-        
         setError('プロンプトの取得中にエラーが発生しました。再読み込みしてください。');
       } finally {
         setLoading(false);
@@ -147,10 +76,7 @@ const Explore = () => {
             <span className="ml-1 text-red-500">エラー</span>
           ) : (
             <span className="ml-1 text-green-500">
-              成功 {localStorage.getItem('using_direct_access') === 'true' 
-                ? '(直接アクセス)' 
-                : `(プロキシ #${localStorage.getItem('cors_proxy_index') || '0'})`
-              }
+              成功 (直接アクセス)
             </span>
           )}
         </div>
@@ -244,29 +170,13 @@ const Explore = () => {
           // エラー表示
           <div className="col-span-3 text-center py-8">
             <p className="text-red-500 text-lg">{error}</p>
-            <div className="flex justify-center space-x-4 mt-4">
-              <button 
-                onClick={() => {
-                  // プロキシを切り替え
-                  const currentIndex = parseInt(localStorage.getItem('cors_proxy_index') || '0', 10);
-                  const nextIndex = (currentIndex + 1) % CORS_PROXIES.length;
-                  localStorage.setItem('cors_proxy_index', nextIndex.toString());
-                  console.log(`プロキシを変更: ${currentIndex} → ${nextIndex}`);
-                  window.location.reload();
-                }} 
-                className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-              >
-                別のプロキシで試す
-              </button>
+            <div className="flex justify-center mt-4">
               <button 
                 onClick={() => window.location.reload()} 
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 再読み込み
               </button>
-            </div>
-            <div className="mt-4 text-sm text-gray-500">
-              現在のプロキシインデックス: {localStorage.getItem('cors_proxy_index') || '0'}
             </div>
           </div>
         ) : filteredPrompts.length > 0 ? (

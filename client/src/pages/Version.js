@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// CORSプロキシのリスト
-const CORS_PROXIES = [
-  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' },
-  { name: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' },
-  { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' }
-];
+// CORSプロキシは不要 - 直接APIアクセスを使用
+const CORS_PROXIES = [];
 
 // バージョン情報ページコンポーネント
 const Version = () => {
@@ -63,49 +59,14 @@ const Version = () => {
         // フロントエンドとバックエンドが同じドメインで動作している場合
         const apiUrl = '/version';
         
-        // CORSプロキシを使用するバックアップURL
-        let corsProxyIndex = localStorage.getItem('cors_proxy_index') || '0';
-        corsProxyIndex = parseInt(corsProxyIndex, 10) || 0;
+        console.log(`Fetching version info from: ${apiUrl}`);
         
-        // CORS_PROXIESはコンポーネント外で定義されています
+        // 直接アクセスのみ
+        const response = await axios.get(apiUrl);
+        console.log('✅ Successfully fetched version information');
         
-        // 選択されたプロキシを使用
-        const proxy = CORS_PROXIES[corsProxyIndex % CORS_PROXIES.length];
-        // 完全なURLを構築（クライアントサイドでのCORSプロキシ用）
-        // 相対パスではなく、完全なURLが必要
-        const fullVersionUrl = `${window.location.origin}/version`;
-        const backupUrl = `${proxy.url}${encodeURIComponent(fullVersionUrl)}`;
-        
-        console.log(`Trying to fetch version info from: ${apiUrl}`);
-        console.log(`Backup URL with CORS proxy (${proxy.name}): ${backupUrl}`);
-        
-        let response;
-        let usingProxy = false;
-        
-        try {
-          response = await axios.get(apiUrl);
-          console.log('✅ Successfully fetched version from primary URL');
-          // 直接URLアクセス成功
-          usingProxy = false;
-        } catch (error) {
-          console.log(`❌ Primary URL failed: ${error.message}`);
-          console.log('Trying backup URL with CORS proxy...');
-          
-          try {
-            response = await axios.get(backupUrl);
-            console.log(`✅ Successfully fetched version using CORS proxy: ${proxy.name}`);
-            // プロキシ使用
-            usingProxy = true;
-          } catch (proxyError) {
-            console.log(`❌ CORS Proxy also failed: ${proxyError.message}`);
-            
-            // 次のプロキシに切り替え
-            const nextProxyIndex = (corsProxyIndex + 1) % CORS_PROXIES.length;
-            localStorage.setItem('cors_proxy_index', nextProxyIndex.toString());
-            
-            throw new Error(`バックエンドへの接続に失敗しました。プライマリURLエラー: ${error.message}, プロキシエラー: ${proxyError.message}`);
-          }
-        }
+        // プロキシは使用しない
+        const usingProxy = false;
         
         // レスポンスを検証（必要な情報が含まれているか）
         if (!response.data || !response.data.status || !response.data.server) {
@@ -321,17 +282,12 @@ const Version = () => {
                 {serverInfo.loading ? '確認中...' : 
                  serverInfo.error ? 'サーバーに接続できませんでした' : 'サーバーが応答しています'}
               </span>
-              {serverInfo.usingProxy && !serverInfo.loading && !serverInfo.error && (
-                <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
-                  CORSプロキシ経由
-                </span>
-              )}
             </div>
             <p className="text-sm text-gray-500 mt-2">
               サーバー時間: {serverInfo.data ? new Date(serverInfo.data.server.timestamp).toLocaleString() : '確認中...'}
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              接続方法: {serverInfo.usingProxy ? 'CORSプロキシ使用' : serverInfo.data ? '直接接続' : '確認中...'}
+              接続方法: 直接接続
             </p>
           </div>
         </div>

@@ -43,21 +43,15 @@ console.log('Original API URL:', baseURL);
 
 // プロキシの使用条件
 // プロンプト一覧ページでのCORS問題のため、本番環境では常にプロキシを使用
-const forceProxy = true; // 開発段階でもプロキシを使用する（troubleshooting用）
+const forceProxy = false; // プロキシを無効化、直接APIアクセス
 const shouldUseProxy = process.env.NODE_ENV === 'production' || forceProxy;
 
-// プロキシの使用状態をローカルストレージに保存
-const usingProxyStorage = localStorage.getItem('using_proxy');
-let isUsingProxy = usingProxyStorage ? (usingProxyStorage === 'true') : shouldUseProxy;
+// プロキシの使用状態をリセット - 直接アクセスに変更
+localStorage.setItem('using_proxy', 'false');
+localStorage.setItem('cors_proxy_index', '0');
+let isUsingProxy = false;
 
-// ページロード時にURLパラメータでプロキシの使用を制御できるようにする
-if (typeof window !== 'undefined') {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('proxy')) {
-    isUsingProxy = urlParams.get('proxy') === 'true';
-    localStorage.setItem('using_proxy', isUsingProxy.toString());
-  }
-}
+// プロキシ使用オプションをすべて無効化 - 直接APIアクセスのみを使用
 
 // 本番環境または強制設定時にプロキシを使用
 let finalBaseURL = baseURL;
