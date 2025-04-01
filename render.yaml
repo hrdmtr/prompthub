@@ -1,0 +1,43 @@
+services:
+  # バックエンドAPI
+  - type: web
+    name: prompthub-api
+    env: node
+    region: singapore # 任意のリージョンを選択
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/test
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: MONGODB_URI
+        sync: false # Renderダッシュボードで設定
+      - key: JWT_SECRET
+        sync: false # Renderダッシュボードで設定
+      - key: CLIENT_URL
+        fromService:
+          name: prompthub-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+    autoDeploy: true
+
+  # フロントエンド
+  - type: web
+    name: prompthub-web
+    env: static
+    region: singapore # 任意のリージョンを選択
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          name: prompthub-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true

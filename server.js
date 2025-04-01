@@ -16,13 +16,17 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // ミドルウェア
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB接続
-mongoose.connect('mongodb://localhost:27017/prompthub')
-  .then(() => console.log('MongoDB connected to localhost:27017'))
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prompthub';
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // テスト用の基本APIエンドポイント
@@ -35,8 +39,8 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 
-// 本番環境ではReactアプリを提供
-if (process.env.NODE_ENV === 'production') {
+// 本番環境ではReactアプリを提供（Renderでは分離デプロイするため、これはローカル環境用）
+if (process.env.NODE_ENV === 'production' && !process.env.RENDER) {
   app.use(express.static(path.join(__dirname, 'client/build')));
   
   app.get('*', (req, res) => {
