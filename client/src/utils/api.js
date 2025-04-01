@@ -22,7 +22,18 @@ else if (process.env.NODE_ENV === 'production') {
 
 const api = axios.create({
   baseURL,
-  withCredentials: true // CORS認証のためにクッキーを送信
+  withCredentials: true, // CORS認証のためにクッキーを送信
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+});
+
+// デバッグ情報
+console.log('API Client Configuration:', {
+  baseURL,
+  withCredentials: true,
+  productionMode: process.env.NODE_ENV === 'production'
 });
 
 // リクエストインターセプター

@@ -25,8 +25,11 @@ const PORT = process.env.PORT || 5001;
 // ミドルウェア - CORSを設定（Render環境用に強化）
 app.use(cors({
   origin: function(origin, callback) {
+    console.log('CORS Request from origin:', origin);
+    
     // ローカル開発時は任意のオリジンを許可
     if (!origin || process.env.NODE_ENV !== 'production') {
+      console.log('Allowing request in development mode or null origin');
       return callback(null, true);
     }
     
@@ -35,24 +38,44 @@ app.use(cors({
       process.env.CLIENT_URL || 'http://localhost:3000',
       // Renderの潜在的なドメインを許可
       'https://prompthub-client.onrender.com',
-      'https://prompthub-api.onrender.com'
+      'https://prompthub-api.onrender.com',
+      'https://prompthub-gsxd.onrender.com',
+      'https://prompthub.onrender.com'
     ];
     
+    // Render環境では全てのRenderドメインを許可
     if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+      console.log('Origin explicitly allowed:', origin);
       callback(null, true);
     } else {
       console.log('CORS blocked for origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
 }));
 
 // CORSデバッグ用ミドルウェア
 app.use((req, res, next) => {
   console.log('Request received from:', req.headers.origin);
   console.log('Request URL:', req.url);
+  console.log('Request method:', req.method);
   console.log('CORS allowed origins:', process.env.CLIENT_URL || 'http://localhost:3000');
+  
+  // CORS ヘッダーを明示的に設定
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  
+  // OPTIONS リクエスト（preflight リクエスト）の処理
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request');
+    return res.status(200).end();
+  }
+  
   next();
 });
 app.use(bodyParser.json());
