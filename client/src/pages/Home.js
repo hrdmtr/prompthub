@@ -30,9 +30,12 @@ const Home = () => {
     <div>
       {/* ヒーローセクション */}
       <section className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl p-8 mb-12">
+        <div className="absolute top-2 right-2 bg-yellow-300 text-red-600 font-bold px-3 py-1 rounded-full shadow-md">
+          デプロイテスト v{Date.now().toString().slice(-6)}
+        </div>
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            AIプロンプトの共有コミュニティへようこそ
+            AIプロンプトの共有コミュニティへようこそ [更新版]
           </h1>
           <p className="text-xl mb-8">
             PromptHubで最高のAIプロンプトを発見、共有、改善しましょう

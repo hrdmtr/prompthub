@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
-// バージョン情報コンポーネント（小さく表示）
+// バージョン情報コンポーネント（より目立つように表示）
 const VersionBadge = () => {
   // 現在のJSタイムスタンプ - リロードで変わるため、デプロイ検証に使用可能
   const jsTimestamp = Math.floor((Date.now() % 10000000) / 10000); // 最後の6桁を3桁に短縮
@@ -11,8 +11,8 @@ const VersionBadge = () => {
   const proxyIndex = localStorage.getItem('cors_proxy_index') || '?';
   
   return (
-    <span className="text-xs opacity-50 ml-2" title="クリックでコピー">
-      [{jsTimestamp}.{proxyIndex}]
+    <span className="text-sm bg-yellow-500 text-blue-900 font-bold px-2 py-1 rounded-full ml-3" title="デプロイ確認用タイムスタンプ">
+      ID:{jsTimestamp}.{proxyIndex}
     </span>
   );
 };
@@ -29,7 +29,7 @@ const Navbar = () => {
     <nav className="bg-blue-600 text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="text-xl font-bold flex items-center">
-          <span>🤖 PromptHub</span>
+          <span>🤖 PromptHub [V2.0]</span>
           <VersionBadge />
         </Link>
         
