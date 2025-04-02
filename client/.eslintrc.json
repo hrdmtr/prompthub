@@ -35,11 +35,26 @@
         "components": ["Link"],
         "specialLink": ["to"]
       }
-    ]
+    ],
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        "external",
+        "internal",
+        ["parent", "sibling"],
+        "index"
+      ],
+      "newlines-between": "always"
+    }]
   },
   "settings": {
     "react": {
       "version": "detect"
+    },
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx"]
+      }
     }
   }
 }

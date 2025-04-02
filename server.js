@@ -1,10 +1,13 @@
 // server.js - バックエンドAPI
+const fs = require('fs');
+const path = require('path');
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
-const path = require('path');
+
 const promptRoutes = require('./routes/promptRoutes');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -81,11 +84,11 @@ function parseMongoURI(uri) {
     const protocol = uri.startsWith('mongodb+srv') ? 'mongodb+srv' : 'mongodb';
     
     // ホスト部分の抽出
-    const authAndHostMatch = uri.match(/@([^\/\?]+)/);
+    const authAndHostMatch = uri.match(/@([^/?]+)/);
     const hostPart = authAndHostMatch ? authAndHostMatch[1] : '不明';
     
     // データベース名の抽出
-    const dbMatch = uri.match(/\/([^\/\?]+)(\?|$)/);
+    const dbMatch = uri.match(/\/([^/?]+)(\?|$)/);
     const dbName = dbMatch ? dbMatch[1] : '不明';
     
     // オプションの抽出
@@ -131,15 +134,15 @@ const connectWithRetry = () => {
       if (uriDetails.host !== '不明' && uriDetails.host !== 'localhost') {
         console.log(`ホスト ${uriDetails.host} のDNS解決を試みています...`);
         const dns = require('dns');
-        dns.lookup(uriDetails.host.split(':')[0], (err, address, family) => {
-          if (err) {
-            console.error('DNS解決エラー:', err.message);
-            console.log('ホスト名が正しいか、またはDNSが正常に機能しているか確認してください。');
-          } else {
+        dns.promises.lookup(uriDetails.host.split(':')[0])
+          .then(({ address, family }) => {
             console.log(`DNS解決成功: ${uriDetails.host} -> ${address} (IPv${family})`);
             console.log('DNSは正常ですが、他の接続問題（認証、ファイアウォール、ネットワーク）の可能性があります。');
-          }
-        });
+          })
+          .catch(err => {
+            console.error('DNS解決エラー:', err.message);
+            console.log('ホスト名が正しいか、またはDNSが正常に機能しているか確認してください。');
+          });
       }
       
       // 接続文字列の検証
@@ -261,7 +264,6 @@ app.use('/api/auth', authRoutes);
 
 // デバッグ情報を表示
 console.log('Current directory:', __dirname);
-const fs = require('fs');
 
 // 可能性のあるビルドパスをチェック（優先順位順）- Render環境に合わせて調整
 console.log('Process working directory:', process.cwd());
@@ -433,8 +435,8 @@ if (process.env.NODE_ENV === 'production') {
   app.get('/static/js/main.*.js', (req, res) => {
     console.log('Main JS requested:', req.path);
     
-    // 実際のファイル名からファイル名パターンを抽出
-    const filename = path.basename(req.path);
+    // パス名からファイル名パターンを抽出
+    path.basename(req.path);
     
     // 可能性のある場所をチェック
     const possibleDirs = [

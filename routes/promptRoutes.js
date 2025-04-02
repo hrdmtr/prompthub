@@ -1,5 +1,6 @@
 // routes/promptRoutes.js
 const express = require('express');
+
 const router = express.Router();
 const Prompt = require('../models/Prompt');
 const User = require('../models/User');

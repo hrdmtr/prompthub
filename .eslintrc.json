@@ -38,5 +38,6 @@
       ],
       "newlines-between": "always"
     }]
-  }
+  },
+  "ignorePatterns": ["client/**", "node_modules/**", "build/**"]
 }
